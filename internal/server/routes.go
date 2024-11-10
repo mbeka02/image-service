@@ -23,6 +23,6 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "test")
 	})
-	r.Get("/register", CreateUserAccount)
+	r.Post("/register", s.handleCreateUser)
 	return r
 }

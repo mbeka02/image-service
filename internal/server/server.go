@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/mbeka02/image-service/internal/database"
@@ -18,13 +17,8 @@ func NewServer(addr string, store *database.Store) *http.Server {
 		Store: store,
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "test route")
-	})
-
 	return &http.Server{
-		Handler: mux,
+		Handler: srv.RegisterRoutes(),
 		Addr:    srv.Addr,
 	}
 }

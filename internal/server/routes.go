@@ -23,5 +23,6 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// 	fmt.Fprintln(w, "image processing service")
 	// })
 	r.Post("/register", s.handleCreateUser)
+	r.Post("/login", s.handleLogin)
 	return r
 }

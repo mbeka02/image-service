@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -17,12 +16,12 @@ func (s *Server) RegisterRoutes() http.Handler {
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: false,
-		MaxAge:           300, // M
+		MaxAge:           300,
 	}))
 	r.Use(middleware.Logger)
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "test")
-	})
+	// r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	fmt.Fprintln(w, "image processing service")
+	// })
 	r.Post("/register", s.handleCreateUser)
 	return r
 }

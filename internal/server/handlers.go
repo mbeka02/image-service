@@ -114,7 +114,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Password: passwordHash,
 	})
 	if err != nil {
-		// Here you might want to check for specific errors like unique constraint violations
+		// TODO: Check for specific errors like unique constraint violations
 		respondWithError(w, http.StatusInternalServerError, errors.New("failed to create user"))
 		return
 	}
@@ -126,6 +126,51 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := respondWithJSON(w, http.StatusCreated, response); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+}
+
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	params := LoginRequest{}
+	if err := parseJSON(r, &params); err != nil {
+
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if validationErrors := validateRequest(params); validationErrors != nil {
+		respondWithJSON(w, http.StatusBadRequest, APIError{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
+			Detail:  fmt.Sprintf("%v", validationErrors),
+		})
+		return
+	}
+	user, err := s.Store.GetUserByEmail(r.Context(), params.Email)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, fmt.Errorf("unable to find user: %v", err))
+		return
+	}
+	err = ComparePassword(params.Password, user.Password)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err)
+		return
+	}
+	userResponse := newUserResponse(user)
+	token, err := s.AuthMaker.Create(user.Email, s.AccessTokenDuration)
+	resp := LoginResponse{
+		AccessToken: token,
+		User:        userResponse,
+	}
+
+	/*	response := APIResponse{
+		Status:  http.StatusCreated,
+		Message: "User created successfully",
+		Data:    user,
+	}*/
+
+	if err := respondWithJSON(w, http.StatusCreated, resp); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}

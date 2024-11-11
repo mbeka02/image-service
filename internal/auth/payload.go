@@ -8,21 +8,21 @@ import (
 )
 
 type Payload struct {
-	Username  string    `json:"username"`
+	Email     string    `json:"email"`
 	IssuedAt  time.Time `json:"issued_at"`
 	ExpiresAt time.Time `json:"expires_at"`
 	ID        uuid.UUID `json:"id"`
 	jwt.RegisteredClaims
 }
 
-func NewPayload(username string, duration time.Duration) (*Payload, error) {
+func NewPayload(email string, duration time.Duration) (*Payload, error) {
 	uuid, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
 	return &Payload{
 		ID:        uuid,
-		Username:  username,
+		Email:     email,
 		IssuedAt:  time.Now(),
 		ExpiresAt: time.Now().Add(duration),
 	}, nil

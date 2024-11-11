@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mbeka02/image-service/internal/auth"
 	"github.com/mbeka02/image-service/internal/database"
 	"github.com/mbeka02/image-service/internal/server"
 
@@ -47,9 +48,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("...unable to setup the db : %v", err)
 	}
+	maker, err := auth.NewJWTMaker(conf.SYMMETRIC_KEY)
+	if err != nil {
+		log.Fatalf("...unable to setup up the auth token maker:%v", err)
+	}
 	done := make(chan bool, 1)
 	//
-	server := server.NewServer(":3000", store)
+	server := server.NewServer(":"+conf.PORT, store, maker, conf.ACCESS_TOKEN_DURATION)
 	go gracefulShutdown(server, done)
 	log.Println("the server is listening on port:3000")
 	server.ListenAndServe()

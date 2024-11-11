@@ -31,20 +31,21 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
-const getUserByID = `-- name: GetUserByID :one
-SELECT user_id , full_name , email FROM users WHERE user_id=$1
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT user_id, full_name, password, email, created_at, password_changed_at FROM users WHERE email=$1
 `
 
-type GetUserByIDRow struct {
-	UserID   int64
-	FullName string
-	Email    string
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, userID int64) (GetUserByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getUserByID, userID)
-	var i GetUserByIDRow
-	err := row.Scan(&i.UserID, &i.FullName, &i.Email)
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.FullName,
+		&i.Password,
+		&i.Email,
+		&i.CreatedAt,
+		&i.PasswordChangedAt,
+	)
 	return i, err
 }
 

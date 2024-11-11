@@ -19,9 +19,6 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 	r.Use(middleware.Logger)
-	// r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-	// 	fmt.Fprintln(w, "image processing service")
-	// })
 	r.Post("/register", s.handleCreateUser)
 	r.Post("/login", s.handleLogin)
 	return r

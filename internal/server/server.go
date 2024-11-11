@@ -8,6 +8,7 @@ import (
 	"github.com/mbeka02/image-service/internal/database"
 )
 
+// type ServerOpts struct {}
 type Server struct {
 	Addr                string
 	Store               *database.Store

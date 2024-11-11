@@ -56,6 +56,6 @@ func main() {
 	//
 	server := server.NewServer(":"+conf.PORT, store, maker, conf.ACCESS_TOKEN_DURATION)
 	go gracefulShutdown(server, done)
-	log.Println("the server is listening on port:3000")
+	log.Println("the server is listening on port" + conf.PORT)
 	server.ListenAndServe()
 }

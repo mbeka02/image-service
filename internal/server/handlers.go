@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/lib/pq"
 	"github.com/mbeka02/image-service/internal/database"
 )
 
@@ -55,8 +56,6 @@ func respondWithError(w http.ResponseWriter, status int, err error) {
 		Message: http.StatusText(status),
 		Detail:  err.Error(),
 	}
-
-	// TODO : consider adding structured error logs
 
 	respondWithJSON(w, status, apiError)
 }
@@ -114,7 +113,14 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Password: passwordHash,
 	})
 	if err != nil {
-		// TODO: Check for specific errors like unique constraint violations
+
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "unique_violation":
+				respondWithError(w, http.StatusForbidden, errors.New("forbidden: the username or email are already in use"))
+				return
+			}
+		}
 		respondWithError(w, http.StatusInternalServerError, errors.New("failed to create user"))
 		return
 	}
@@ -149,7 +155,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := s.Store.GetUserByEmail(r.Context(), params.Email)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, fmt.Errorf("unable to find user: %v", err))
+		respondWithError(w, http.StatusNotFound, errors.New("unable to find user"))
 		return
 	}
 	err = ComparePassword(params.Password, user.Password)
@@ -163,13 +169,6 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		AccessToken: token,
 		User:        userResponse,
 	}
-
-	/*	response := APIResponse{
-		Status:  http.StatusCreated,
-		Message: "User created successfully",
-		Data:    user,
-	}*/
-
 	if err := respondWithJSON(w, http.StatusCreated, resp); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err)
 		return

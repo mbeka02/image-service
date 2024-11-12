@@ -19,7 +19,14 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 	r.Use(middleware.Logger)
+
 	r.Post("/register", s.handleCreateUser)
 	r.Post("/login", s.handleLogin)
+
+	r.Group(func(r chi.Router) {
+		r.Use(AuthMiddleware(s.AuthMaker))
+		r.Get("/users", s.handleGetUsers)
+	})
+
 	return r
 }

@@ -175,6 +175,24 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleGetUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := s.Store.GetUsers(r.Context(), database.GetUsersParams{
+		Limit:  10,
+		Offset: 0,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	response := APIResponse{
+		Status:  http.StatusOK,
+		Data:    users,
+		Message: "users:",
+	}
+	respondWithJSON(w, http.StatusOK, response)
+	return
+}
+
 func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 }

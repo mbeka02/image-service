@@ -9,6 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/lib/pq"
 	"github.com/mbeka02/image-service/internal/database"
+	"github.com/mbeka02/image-service/internal/mailer"
 )
 
 // APIError represents a structured error response
@@ -124,7 +125,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, errors.New("failed to create user"))
 		return
 	}
-
+	mailer.Example()
 	response := APIResponse{
 		Status:  http.StatusCreated,
 		Message: "User created successfully",

@@ -11,6 +11,8 @@ type Config struct {
 	SYMMETRIC_KEY         string        `mapstructure:"SYMMETRIC_KEY"`
 	ACCESS_TOKEN_DURATION time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 	PORT                  string        `mapstructure:"PORT"`
+	MAILER_PASSWORD       string        `mapstructure:"MAILER_PASSWORD"`
+	MAILER_HOST           string        `mapstructure:"MAILER_HOST"`
 }
 
 func LoadConfig(path string) (*Config, error) {

@@ -53,7 +53,6 @@ func main() {
 		log.Fatalf("...unable to setup up the auth token maker:%v", err)
 	}
 	done := make(chan bool, 1)
-	//
 	server := server.NewServer(":"+conf.PORT, store, maker, conf.ACCESS_TOKEN_DURATION)
 	go gracefulShutdown(server, done)
 	log.Println("the server is listening on port:" + conf.PORT)

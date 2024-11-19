@@ -37,6 +37,30 @@ func (b *BimgProccessor) Rotate(path string, angle int) ([]byte, error) {
 	return bimg.NewImage(buff).Rotate(bimg.Angle(angle))
 }
 
+func (b *BimgProccessor) Crop(path string, width, height int) ([]byte, error) {
+	buff, err := bimg.Read(path)
+	if err != nil {
+		return nil, err
+	}
+	return bimg.NewImage(buff).Crop(width, height, bimg.GravityCentre)
+}
+
+func (b *BimgProccessor) Zoom(path string, factor int) ([]byte, error) {
+	buff, err := bimg.Read(path)
+	if err != nil {
+		return nil, err
+	}
+	return bimg.NewImage(buff).Zoom(factor)
+}
+
+func (b *BimgProccessor) Flip(path string) ([]byte, error) {
+	buff, err := bimg.Read(path)
+	if err != nil {
+		return nil, err
+	}
+	return bimg.NewImage(buff).Flip()
+}
+
 func (b *BimgProccessor) Convert(path, imageType string) ([]byte, error) {
 	buff, err := bimg.Read(path)
 	if err != nil {

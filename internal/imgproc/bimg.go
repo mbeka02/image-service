@@ -1,6 +1,10 @@
 package imgproc
 
-import "github.com/h2non/bimg"
+import (
+	"fmt"
+
+	"github.com/h2non/bimg"
+)
 
 type BimgProccessor struct {
 	ProcessorOptions bimg.Options
@@ -23,4 +27,31 @@ func (b *BimgProccessor) Resize(path string, width, height int) ([]byte, error) 
 	}
 
 	return bimg.NewImage(buff).Resize(width, height)
+}
+
+func (b *BimgProccessor) Rotate(path string, angle int) ([]byte, error) {
+	buff, err := bimg.Read(path)
+	if err != nil {
+		return nil, err
+	}
+	return bimg.NewImage(buff).Rotate(bimg.Angle(angle))
+}
+
+func (b *BimgProccessor) Convert(path, imageType string) ([]byte, error) {
+	buff, err := bimg.Read(path)
+	if err != nil {
+		return nil, err
+	}
+	switch imageType {
+	case "png":
+		return bimg.NewImage(buff).Convert(bimg.PNG)
+	case "jpeg":
+		return bimg.NewImage(buff).Convert(bimg.JPEG)
+	case "webp":
+		return bimg.NewImage(buff).Convert(bimg.WEBP)
+	case "svg":
+		return bimg.NewImage(buff).Convert(bimg.SVG)
+	default:
+		return nil, fmt.Errorf("%s is not a supported file format", imageType)
+	}
 }

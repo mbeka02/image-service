@@ -20,8 +20,12 @@ func NewBimgProcessor(quality, compression int) ImageProcessor {
 	}
 }
 
+func readImage(path string) ([]byte, error) {
+	return bimg.Read(path)
+}
+
 func (b *BimgProccessor) Resize(path string, width, height int) ([]byte, error) {
-	buff, err := bimg.Read(path)
+	buff, err := readImage(path)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +34,7 @@ func (b *BimgProccessor) Resize(path string, width, height int) ([]byte, error) 
 }
 
 func (b *BimgProccessor) Rotate(path string, angle int) ([]byte, error) {
-	buff, err := bimg.Read(path)
+	buff, err := readImage(path)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +42,7 @@ func (b *BimgProccessor) Rotate(path string, angle int) ([]byte, error) {
 }
 
 func (b *BimgProccessor) Crop(path string, width, height int) ([]byte, error) {
-	buff, err := bimg.Read(path)
+	buff, err := readImage(path)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +50,7 @@ func (b *BimgProccessor) Crop(path string, width, height int) ([]byte, error) {
 }
 
 func (b *BimgProccessor) Zoom(path string, factor int) ([]byte, error) {
-	buff, err := bimg.Read(path)
+	buff, err := readImage(path)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +58,7 @@ func (b *BimgProccessor) Zoom(path string, factor int) ([]byte, error) {
 }
 
 func (b *BimgProccessor) Flip(path string) ([]byte, error) {
-	buff, err := bimg.Read(path)
+	buff, err := readImage(path)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +66,7 @@ func (b *BimgProccessor) Flip(path string) ([]byte, error) {
 }
 
 func (b *BimgProccessor) Convert(path, imageType string) ([]byte, error) {
-	buff, err := bimg.Read(path)
+	buff, err := readImage(path)
 	if err != nil {
 		return nil, err
 	}

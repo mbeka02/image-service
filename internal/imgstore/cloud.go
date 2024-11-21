@@ -3,37 +3,88 @@ package imgstore
 import (
 	"context"
 	"fmt"
-	"log"
+	"io"
+	"mime/multipart"
 	"time"
 
 	"cloud.google.com/go/storage"
 )
 
-func Setup() {
+type GCStorage struct {
+	client     *storage.Client
+	bucketName string
+	projectId  string
+}
+
+func NewGCStorage(projectId, bucketName string) (*GCStorage, error) {
 	ctx := context.Background()
-
-	// Sets your Google Cloud Platform project ID.
-	projectID := ""
-
-	// Creates a client.
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		return nil, fmt.Errorf("unable to setup the storage client: %v", err)
 	}
-	defer client.Close()
-
-	// Sets the name for the new bucket.
-	bucketName := "my-new-bucket"
-
-	// Creates a Bucket instance.
-	bucket := client.Bucket(bucketName)
-
-	// Creates the new bucket.
-	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
-	defer cancel()
-	if err := bucket.Create(ctx, projectID, nil); err != nil {
-		log.Fatalf("Failed to create bucket: %v", err)
-	}
-
-	fmt.Printf("Bucket %v created.\n", bucketName)
+	return &GCStorage{
+		client,
+		bucketName,
+		projectId,
+	}, nil
 }
+
+func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader) (string, error) {
+	// open the associated file
+	srcFile, err := fileHeader.Open()
+	if err != nil {
+		return "", fmt.Errorf("unable to open the file:%v", err)
+	}
+
+	defer srcFile.Close()
+	// create a unique filename
+	fileName := fmt.Sprintf("%s_%d", fileHeader.Filename, time.Now().UnixNano())
+
+	// get the bucket handle
+	bucket := g.client.Bucket(g.bucketName)
+	objectHandle := bucket.Object(fileName)
+
+	writer := objectHandle.NewWriter(ctx)
+	writer.ContentType = fileHeader.Header.Get("Content-Type")
+
+	// Copy the file to the Object
+	if _, err := io.Copy(writer, srcFile); err != nil {
+		return "", fmt.Errorf("unable to copy to storage:%v", err)
+	}
+	defer writer.Close()
+	// make the uploaded images public for Now
+	if err := objectHandle.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
+		return "", fmt.Errorf("unable to make the file public:%v", err)
+	}
+	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", g.bucketName, fileName), nil
+}
+
+//
+// func Setup() {
+// 	ctx := context.Background()
+//
+// 	// Sets your Google Cloud Platform project ID.
+// 	projectID := ""
+//
+// 	// Creates a client.
+// 	client, err := storage.NewClient(ctx)
+// 	if err != nil {
+// 		log.Fatalf("Failed to create client: %v", err)
+// 	}
+// 	defer client.Close()
+//
+// 	// Sets the name for the new bucket.
+// 	bucketName := "my-new-bucket"
+//
+// 	// Creates a Bucket instance.
+// 	bucket := client.Bucket(bucketName)
+//
+// 	// Creates the new bucket.
+// 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+// 	defer cancel()
+// 	if err := bucket.Create(ctx, projectID, nil); err != nil {
+// 		log.Fatalf("Failed to create bucket: %v", err)
+// 	}
+//
+// 	fmt.Printf("Bucket %v created.\n", bucketName)
+// }

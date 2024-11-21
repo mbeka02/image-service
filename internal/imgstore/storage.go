@@ -1,1 +1,1 @@
-package imagestore
+package imgstore

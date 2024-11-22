@@ -59,6 +59,31 @@ func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader
 	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", g.bucketName, fileName), nil
 }
 
+func (g *GCStorage) Get(ctx context.Context, fileName string) ([]byte, error) {
+	object := g.client.Bucket(g.bucketName).Object(fileName)
+	reader, err := object.NewReader(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create a new reader:%v", err)
+	}
+
+	defer reader.Close()
+
+	return io.ReadAll(reader)
+}
+
+func (g *GCStorage) Delete(ctx context.Context, fileName string) error {
+	object := g.client.Bucket(g.bucketName).Object(fileName)
+
+	if err := object.Delete(ctx); err != nil {
+		return fmt.Errorf("unable to delete the file:%v", err)
+	}
+	return nil
+}
+
+func (g *GCStorage) Close() error {
+	return g.client.Close()
+}
+
 //
 // func Setup() {
 // 	ctx := context.Background()

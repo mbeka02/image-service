@@ -1,7 +1,12 @@
 package imgstore
 
-import "mime/multipart"
+import (
+	"context"
+	"mime/multipart"
+)
 
 type Storage interface {
-	Upload(file *multipart.FileHeader) (string, error)
+	Upload(ctx context.Context, file *multipart.FileHeader) (string, error)
+	Get(ctx context.Context, fileName string) ([]byte, error)
+	Delete(fileName string) error
 }

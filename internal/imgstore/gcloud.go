@@ -16,7 +16,7 @@ type GCStorage struct {
 	projectId  string
 }
 
-func NewGCStorage(projectId, bucketName string) (*GCStorage, error) {
+func NewGCStorage(projectId, bucketName string) (Storage, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {

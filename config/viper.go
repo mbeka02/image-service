@@ -13,6 +13,8 @@ type Config struct {
 	PORT                  string        `mapstructure:"PORT"`
 	MAILER_PASSWORD       string        `mapstructure:"MAILER_PASSWORD"`
 	MAILER_HOST           string        `mapstructure:"MAILER_HOST"`
+	GCLOUD_PROJECT_ID     string        `mapstructure:"GCLOUD_PROJECT_ID"`
+	GCLOUD_BUCKET_NAME    string        `mapstructure:"GCLOUD_BUCKET_NAME"`
 }
 
 func LoadConfig(path string) (*Config, error) {

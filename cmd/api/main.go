@@ -10,6 +10,7 @@ import (
 
 	"github.com/mbeka02/image-service/internal/auth"
 	"github.com/mbeka02/image-service/internal/database"
+	"github.com/mbeka02/image-service/internal/imgstore"
 	"github.com/mbeka02/image-service/internal/mailer"
 	"github.com/mbeka02/image-service/internal/server"
 
@@ -54,8 +55,13 @@ func main() {
 		log.Fatalf("...unable to setup up the auth token maker:%v", err)
 	}
 	newMailer := mailer.NewMailer(conf.MAILER_HOST, conf.MAILER_PASSWORD)
+	fileStorage, err := imgstore.NewGCStorage(conf.GCLOUD_PROJECT_ID, conf.GCLOUD_BUCKET_NAME)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	done := make(chan bool, 1)
-	server := server.NewServer(":"+conf.PORT, store, maker, conf.ACCESS_TOKEN_DURATION, newMailer)
+	server := server.NewServer(":"+conf.PORT, store, maker, conf.ACCESS_TOKEN_DURATION, newMailer, fileStorage)
 	go gracefulShutdown(server, done)
 	log.Println("the server is listening on port:" + conf.PORT)
 	server.ListenAndServe()

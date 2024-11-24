@@ -1,91 +1,21 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/lib/pq"
+	"github.com/mbeka02/image-service/internal/auth"
 	"github.com/mbeka02/image-service/internal/database"
+	"github.com/mbeka02/image-service/internal/models"
 )
 
-// APIError represents a structured error response
-type APIError struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
-	Detail  string `json:"detail,omitempty"`
-}
-
-// APIResponse represents a successful response
-type APIResponse struct {
-	Status  int         `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-}
-
-// ValidationError represents validation error details
-type ValidationError struct {
-	Field   string `json:"field"`
-	Message string `json:"message"`
-}
-
-var (
-	validate *validator.Validate
-
-	ErrInvalidJSON    = errors.New("invalid JSON payload")
-	ErrInvalidRequest = errors.New("invalid request")
-)
-
-// respondWithJSON handles writing JSON responses
-func respondWithJSON(w http.ResponseWriter, status int, payload interface{}) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		return fmt.Errorf("failed to encode response: %w", err)
-	}
-	return nil
-}
-
-// respondWithError handles error responses in a consistent format
-func respondWithError(w http.ResponseWriter, status int, err error) {
-	apiError := APIError{
-		Status:  status,
-		Message: http.StatusText(status),
-		Detail:  err.Error(),
-	}
-
-	respondWithJSON(w, status, apiError)
-}
-
-// parseJSON safely decodes JSON request bodies
-func parseJSON(r *http.Request, v interface{}) error {
-	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidJSON, err)
-	}
-
-	return nil
-}
-
-// validateRequest handles struct validation
-func validateRequest(v interface{}) []ValidationError {
-	if err := validate.Struct(v); err != nil {
-		var validationErrors []ValidationError
-		for _, err := range err.(validator.ValidationErrors) {
-			validationErrors = append(validationErrors, ValidationError{
-				Field:   err.Field(),
-				Message: fmt.Sprintf("failed validation on '%s'", err.Tag()),
-			})
-		}
-		return validationErrors
-	}
-	return nil
-}
+var validate *validator.Validate
 
 func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	params := CreateUserRequest{}
+	params := models.CreateUserRequest{}
 
 	if err := parseJSON(r, &params); err != nil {
 		respondWithError(w, http.StatusBadRequest, err)
@@ -101,7 +31,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	passwordHash, err := HashPassword(params.Password)
+	passwordHash, err := auth.HashPassword(params.Password)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, errors.New("failed to process password"))
 		return
@@ -144,7 +74,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	params := LoginRequest{}
+	params := models.LoginRequest{}
 	if err := parseJSON(r, &params); err != nil {
 
 		respondWithError(w, http.StatusBadRequest, err)
@@ -164,14 +94,14 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusNotFound, errors.New("unable to find user"))
 		return
 	}
-	err = ComparePassword(params.Password, user.Password)
+	err = auth.ComparePassword(params.Password, user.Password)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, err)
 		return
 	}
-	userResponse := newUserResponse(user)
+	userResponse := models.NewUserResponse(user)
 	token, err := s.AuthMaker.Create(user.Email, s.AccessTokenDuration)
-	resp := LoginResponse{
+	resp := models.LoginResponse{
 		AccessToken: token,
 		User:        userResponse,
 	}

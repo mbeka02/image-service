@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"errors"
@@ -111,22 +111,44 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) handleGetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := s.Store.GetUsers(r.Context(), database.GetUsersParams{
-		Limit:  10,
-		Offset: 0,
-	})
+// func (s *Server) handleGetUsers(w http.ResponseWriter, r *http.Request) {
+// 	users, err := s.Store.GetUsers(r.Context(), database.GetUsersParams{
+// 		Limit:  10,
+// 		Offset: 0,
+// 	})
+// 	if err != nil {
+// 		respondWithError(w, http.StatusInternalServerError, err)
+// 		return
+// 	}
+// 	response := APIResponse{
+// 		Status:  http.StatusOK,
+// 		Data:    users,
+// 		Message: "users:",
+// 	}
+// 	respondWithJSON(w, http.StatusOK, response)
+// 	return
+// }
+
+func (s *Server) handleImageUpload(w http.ResponseWriter, r *http.Request) {
+	// get the file
+	_, fileHeader, err := r.FormFile("image")
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("bad request:%v", err))
 		return
 	}
+	// upload the file to GC storage
+	uploadUrl, err := s.FileStorage.Upload(r.Context(), fileHeader)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("internal server error : %v", err))
+		return
+	}
+	// TODO : upadtae db
 	response := APIResponse{
 		Status:  http.StatusOK,
-		Data:    users,
-		Message: "users:",
+		Data:    uploadUrl,
+		Message: "uploaded",
 	}
 	respondWithJSON(w, http.StatusOK, response)
-	return
 }
 
 func init() {

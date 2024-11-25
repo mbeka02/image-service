@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"net/http"
@@ -10,7 +10,6 @@ import (
 	"github.com/mbeka02/image-service/internal/mailer"
 )
 
-// type ServerOpts struct {}
 type Server struct {
 	Addr                string
 	Store               *database.Store

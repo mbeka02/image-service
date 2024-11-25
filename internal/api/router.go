@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"net/http"
@@ -23,9 +23,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Post("/register", s.handleCreateUser)
 	r.Post("/login", s.handleLogin)
 
-	r.Group(func(r chi.Router) {
+	r.Route("/images", func(r chi.Router) {
 		r.Use(AuthMiddleware(s.AuthMaker))
-		r.Get("/users", s.handleGetUsers)
+		// r.Get("/users", s.handleGetUsers)
+		r.Post("/upload", s.handleImageUpload)
 	})
 
 	return r

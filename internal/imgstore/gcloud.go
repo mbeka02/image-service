@@ -53,9 +53,9 @@ func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader
 	}
 	defer writer.Close()
 	// make the uploaded images public for Now
-	if err := objectHandle.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
+	/*	if err := objectHandle.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
 		return "", fmt.Errorf("unable to make the file public:%v", err)
-	}
+	}*/
 	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", g.bucketName, fileName), nil
 }
 

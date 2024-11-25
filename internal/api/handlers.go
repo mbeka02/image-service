@@ -100,7 +100,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userResponse := models.NewUserResponse(user)
-	token, err := s.AuthMaker.Create(user.Email, s.AccessTokenDuration)
+	token, err := s.AuthMaker.Create(user.Email, user.UserID, s.AccessTokenDuration)
 	resp := models.LoginResponse{
 		AccessToken: token,
 		User:        userResponse,
@@ -137,15 +137,31 @@ func (s *Server) handleImageUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// upload the file to GC storage
-	uploadUrl, err := s.FileStorage.Upload(r.Context(), fileHeader)
+	uploadResponse, err := s.FileStorage.Upload(r.Context(), fileHeader)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("internal server error : %v", err))
 		return
 	}
-	// TODO : upadtae db
+	payload, err := getAuthPayload(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	// save to DB
+	createdImage, err := s.Store.CreateImage(r.Context(), database.CreateImageParams{
+		UserID:     payload.UserID,
+		FileName:   uploadResponse.FileName,
+		StorageUrl: uploadResponse.StorageUrl,
+		FileSize:   uploadResponse.Size,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	response := APIResponse{
 		Status:  http.StatusOK,
-		Data:    uploadUrl,
+		Data:    createdImage,
 		Message: "uploaded",
 	}
 	respondWithJSON(w, http.StatusOK, response)

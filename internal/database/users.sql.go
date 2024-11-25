@@ -32,7 +32,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT user_id, full_name, password, email, created_at, password_changed_at FROM users WHERE email=$1
+SELECT user_id, user_name, full_name, password, email, created_at, verified_at, password_changed_at FROM users WHERE email=$1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -40,10 +40,12 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	var i User
 	err := row.Scan(
 		&i.UserID,
+		&i.UserName,
 		&i.FullName,
 		&i.Password,
 		&i.Email,
 		&i.CreatedAt,
+		&i.VerifiedAt,
 		&i.PasswordChangedAt,
 	)
 	return i, err

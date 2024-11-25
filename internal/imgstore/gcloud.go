@@ -29,11 +29,11 @@ func NewGCStorage(projectId, bucketName string) (Storage, error) {
 	}, nil
 }
 
-func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader) (string, error) {
+func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader) (*UploadResponse, error) {
 	// open the associated file
 	srcFile, err := fileHeader.Open()
 	if err != nil {
-		return "", fmt.Errorf("unable to open the file:%v", err)
+		return nil, fmt.Errorf("unable to open the file:%v", err)
 	}
 
 	defer srcFile.Close()
@@ -48,15 +48,20 @@ func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader
 	writer.ContentType = fileHeader.Header.Get("Content-Type")
 
 	// Copy the file to the Object
-	if _, err := io.Copy(writer, srcFile); err != nil {
-		return "", fmt.Errorf("unable to copy to storage:%v", err)
+	written, err := io.Copy(writer, srcFile)
+	if err != nil {
+		return nil, fmt.Errorf("unable to copy to storage:%v", err)
 	}
 	defer writer.Close()
 	// make the uploaded images public for Now
 	/*	if err := objectHandle.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
 		return "", fmt.Errorf("unable to make the file public:%v", err)
 	}*/
-	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", g.bucketName, fileName), nil
+	return &UploadResponse{
+		FileName:   fileName,
+		Size:       written,
+		StorageUrl: fmt.Sprintf("https://storage.googleapis.com/%s/%s", g.bucketName, fileName),
+	}, nil
 }
 
 func (g *GCStorage) Get(ctx context.Context, fileName string) ([]byte, error) {

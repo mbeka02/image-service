@@ -5,14 +5,30 @@
 package database
 
 import (
+	"database/sql"
 	"time"
+
+	"github.com/sqlc-dev/pqtype"
 )
+
+type Image struct {
+	ImageID    int64
+	UserID     int64
+	FileName   string
+	FileSize   int64
+	StorageUrl string
+	Metadata   pqtype.NullRawMessage
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
 
 type User struct {
 	UserID            int64
+	UserName          sql.NullString
 	FullName          string
 	Password          string
 	Email             string
 	CreatedAt         time.Time
+	VerifiedAt        sql.NullTime
 	PasswordChangedAt time.Time
 }

@@ -25,8 +25,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	r.Route("/images", func(r chi.Router) {
 		r.Use(AuthMiddleware(s.AuthMaker))
-		// r.Get("/users", s.handleGetUsers)
+		r.Get("/get", s.handleGetImages)
 		r.Post("/upload", s.handleImageUpload)
+		r.Delete("/delete/{imageId}", s.handleDeleteImage)
 	})
 
 	return r

@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/lib/pq"
 	"github.com/mbeka02/image-service/internal/auth"
@@ -111,24 +113,6 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func (s *Server) handleGetUsers(w http.ResponseWriter, r *http.Request) {
-// 	users, err := s.Store.GetUsers(r.Context(), database.GetUsersParams{
-// 		Limit:  10,
-// 		Offset: 0,
-// 	})
-// 	if err != nil {
-// 		respondWithError(w, http.StatusInternalServerError, err)
-// 		return
-// 	}
-// 	response := APIResponse{
-// 		Status:  http.StatusOK,
-// 		Data:    users,
-// 		Message: "users:",
-// 	}
-// 	respondWithJSON(w, http.StatusOK, response)
-// 	return
-// }
-
 func (s *Server) handleImageUpload(w http.ResponseWriter, r *http.Request) {
 	// get the file
 	_, fileHeader, err := r.FormFile("image")
@@ -163,6 +147,81 @@ func (s *Server) handleImageUpload(w http.ResponseWriter, r *http.Request) {
 		Status:  http.StatusOK,
 		Data:    createdImage,
 		Message: "uploaded",
+	}
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleGetImages(w http.ResponseWriter, r *http.Request) {
+	payload, err := getAuthPayload(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// Get limit from query parameter, default to 10 if not provided
+	limitStr := r.URL.Query().Get("limit")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10 // default limit
+	}
+
+	// Get offset from query parameter, default to 0 if not provided
+	offsetStr := r.URL.Query().Get("offset")
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		offset = 0 // default offset
+	}
+	data, err := s.Store.GetUserImages(r.Context(), database.GetUserImagesParams{
+		UserID: payload.UserID,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	response := APIResponse{
+		Status:  http.StatusOK,
+		Data:    data,
+		Message: "images",
+	}
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleDeleteImage(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "imageId")
+	imageId, err := strconv.Atoi(idParam)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, errors.New("invalid url param"))
+		return
+	}
+	payload, err := getAuthPayload(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	image, err := s.Store.GetImage(r.Context(), int64(imageId))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, errors.New("unable to get image"))
+		return
+	}
+	if image.UserID != payload.UserID {
+		respondWithError(w, http.StatusUnauthorized, errors.New("unauthorized!"))
+		return
+	}
+	if err = s.FileStorage.Delete(r.Context(), image.FileName); err != nil {
+		respondWithError(w, http.StatusInternalServerError, errors.New("unable to delete the image"))
+		return
+	}
+
+	s.Store.DeleteUserImage(r.Context(), database.DeleteUserImageParams{
+		UserID:  payload.UserID,
+		ImageID: int64(imageId),
+	})
+	response := APIResponse{
+		Status:  http.StatusOK,
+		Message: "deleted the image sucessfully",
+		Data:    nil,
 	}
 	respondWithJSON(w, http.StatusOK, response)
 }

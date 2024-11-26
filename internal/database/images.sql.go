@@ -37,3 +37,79 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) (Creat
 	err := row.Scan(&i.FileName, &i.FileSize, &i.StorageUrl)
 	return i, err
 }
+
+const deleteUserImage = `-- name: DeleteUserImage :exec
+DELETE FROM images WHERE image_id=$1 AND user_id=$2
+`
+
+type DeleteUserImageParams struct {
+	ImageID int64
+	UserID  int64
+}
+
+func (q *Queries) DeleteUserImage(ctx context.Context, arg DeleteUserImageParams) error {
+	_, err := q.db.ExecContext(ctx, deleteUserImage, arg.ImageID, arg.UserID)
+	return err
+}
+
+const getImage = `-- name: GetImage :one
+SELECT image_id, user_id, file_name, file_size, storage_url, metadata, created_at, updated_at FROM images WHERE image_id=$1
+`
+
+func (q *Queries) GetImage(ctx context.Context, imageID int64) (Image, error) {
+	row := q.db.QueryRowContext(ctx, getImage, imageID)
+	var i Image
+	err := row.Scan(
+		&i.ImageID,
+		&i.UserID,
+		&i.FileName,
+		&i.FileSize,
+		&i.StorageUrl,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserImages = `-- name: GetUserImages :many
+SELECT image_id, user_id, file_name, file_size, storage_url, metadata, created_at, updated_at FROM images WHERE user_id=$1 LIMIT $2 OFFSET $3
+`
+
+type GetUserImagesParams struct {
+	UserID int64
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetUserImages(ctx context.Context, arg GetUserImagesParams) ([]Image, error) {
+	rows, err := q.db.QueryContext(ctx, getUserImages, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Image
+	for rows.Next() {
+		var i Image
+		if err := rows.Scan(
+			&i.ImageID,
+			&i.UserID,
+			&i.FileName,
+			&i.FileSize,
+			&i.StorageUrl,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"os"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -64,7 +65,7 @@ func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader
 	}, nil
 }
 
-func (g *GCStorage) Get(ctx context.Context, fileName string) ([]byte, error) {
+func (g *GCStorage) Get(ctx context.Context, fileName string) (io.Reader, error) {
 	object := g.client.Bucket(g.bucketName).Object(fileName)
 	reader, err := object.NewReader(ctx)
 	if err != nil {
@@ -73,7 +74,7 @@ func (g *GCStorage) Get(ctx context.Context, fileName string) ([]byte, error) {
 
 	defer reader.Close()
 
-	return io.ReadAll(reader)
+	return reader, nil
 }
 
 func (g *GCStorage) Delete(ctx context.Context, fileName string) error {
@@ -85,36 +86,27 @@ func (g *GCStorage) Delete(ctx context.Context, fileName string) error {
 	return nil
 }
 
+func (g *GCStorage) DownloadTemp(ctx context.Context, fileName string) (string, error) {
+	// Get the file
+	fileData, err := g.Get(ctx, fileName)
+	if err != nil {
+		return "", fmt.Errorf("unable to get the file:%v", err)
+	}
+
+	// Create a temporary file
+	tempFile, err := os.CreateTemp("", "example")
+	if err != nil {
+		return "", fmt.Errorf("unable to save the file locally:%v", err)
+	}
+
+	defer tempFile.Close()
+	if _, err = io.Copy(tempFile, fileData); err != nil {
+		return "", fmt.Errorf("unable to copy the file contents")
+	}
+
+	return tempFile.Name(), nil
+}
+
 func (g *GCStorage) Close() error {
 	return g.client.Close()
 }
-
-//
-// func Setup() {
-// 	ctx := context.Background()
-//
-// 	// Sets your Google Cloud Platform project ID.
-// 	projectID := ""
-//
-// 	// Creates a client.
-// 	client, err := storage.NewClient(ctx)
-// 	if err != nil {
-// 		log.Fatalf("Failed to create client: %v", err)
-// 	}
-// 	defer client.Close()
-//
-// 	// Sets the name for the new bucket.
-// 	bucketName := "my-new-bucket"
-//
-// 	// Creates a Bucket instance.
-// 	bucket := client.Bucket(bucketName)
-//
-// 	// Creates the new bucket.
-// 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
-// 	defer cancel()
-// 	if err := bucket.Create(ctx, projectID, nil); err != nil {
-// 		log.Fatalf("Failed to create bucket: %v", err)
-// 	}
-//
-// 	fmt.Printf("Bucket %v created.\n", bucketName)
-// }

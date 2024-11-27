@@ -107,7 +107,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		AccessToken: token,
 		User:        userResponse,
 	}
-	if err := respondWithJSON(w, http.StatusCreated, resp); err != nil {
+	if err := respondWithJSON(w, http.StatusOK, resp); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}

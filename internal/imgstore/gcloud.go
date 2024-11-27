@@ -65,7 +65,7 @@ func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader
 	}, nil
 }
 
-func (g *GCStorage) Get(ctx context.Context, fileName string) (io.Reader, error) {
+func (g *GCStorage) Download(ctx context.Context, fileName string) (io.Reader, error) {
 	object := g.client.Bucket(g.bucketName).Object(fileName)
 	reader, err := object.NewReader(ctx)
 	if err != nil {
@@ -88,13 +88,13 @@ func (g *GCStorage) Delete(ctx context.Context, fileName string) error {
 
 func (g *GCStorage) DownloadTemp(ctx context.Context, fileName string) (string, error) {
 	// Get the file
-	fileData, err := g.Get(ctx, fileName)
+	fileData, err := g.Download(ctx, fileName)
 	if err != nil {
 		return "", fmt.Errorf("unable to get the file:%v", err)
 	}
 
 	// Create a temporary file
-	tempFile, err := os.CreateTemp("", "example")
+	tempFile, err := os.CreateTemp("root", fileName)
 	if err != nil {
 		return "", fmt.Errorf("unable to save the file locally:%v", err)
 	}

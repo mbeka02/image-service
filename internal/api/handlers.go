@@ -247,8 +247,18 @@ func (s *Server) handleImageResize(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
+	fileData, err := s.ImageProcessor.Resize(path, params.Width, params.Height)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	response := APIResponse{
+		Message: "Image Resized",
+		Data:    fileData,
+		Status:  http.StatusOK,
+	}
 
-	// respondWithJSON(w, http.StatusOK, path)
+	respondWithJSON(w, http.StatusOK, response)
 	return
 }
 

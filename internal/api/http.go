@@ -76,3 +76,7 @@ func validateRequest(v interface{}) []ValidationError {
 	}
 	return nil
 }
+
+func init() {
+	validate = validator.New(validator.WithRequiredStructEnabled())
+}

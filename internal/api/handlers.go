@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -247,6 +248,7 @@ func (s *Server) handleImageResize(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
+	defer os.RemoveAll(path)
 	fileData, err := s.ImageProcessor.Resize(path, params.Width, params.Height)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err)

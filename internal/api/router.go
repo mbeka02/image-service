@@ -27,6 +27,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Use(AuthMiddleware(s.AuthMaker))
 		r.Get("/get", s.handleGetImages)
 		r.Post("/upload", s.handleImageUpload)
+		r.Post("/resize", s.handleImageResize)
 		r.Delete("/delete/{imageId}", s.handleDeleteImage)
 	})
 

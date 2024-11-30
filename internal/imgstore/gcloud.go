@@ -94,7 +94,7 @@ func (g *GCStorage) DownloadTemp(ctx context.Context, fileName string) (string, 
 	}
 
 	// Create a temporary file
-	tempFile, err := os.CreateTemp("root", fileName)
+	tempFile, err := os.CreateTemp("", fileName)
 	if err != nil {
 		return "", fmt.Errorf("unable to save the file locally:%v", err)
 	}

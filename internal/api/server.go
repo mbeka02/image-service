@@ -6,6 +6,7 @@ import (
 
 	"github.com/mbeka02/image-service/internal/auth"
 	"github.com/mbeka02/image-service/internal/database"
+	"github.com/mbeka02/image-service/internal/imgproc"
 	"github.com/mbeka02/image-service/internal/imgstore"
 	"github.com/mbeka02/image-service/internal/mailer"
 )
@@ -16,10 +17,11 @@ type Server struct {
 	AuthMaker           auth.Maker
 	Mailer              *mailer.Mailer
 	FileStorage         imgstore.Storage
+	ImageProcessor      imgproc.ImageProcessor
 	AccessTokenDuration time.Duration
 }
 
-func NewServer(addr string, store *database.Store, maker auth.Maker, duration time.Duration, mailer *mailer.Mailer, fileStorage imgstore.Storage) *http.Server {
+func NewServer(addr string, store *database.Store, maker auth.Maker, duration time.Duration, mailer *mailer.Mailer, fileStorage imgstore.Storage, imageProcessor imgproc.ImageProcessor) *http.Server {
 	srv := Server{
 		Addr:                addr,
 		Store:               store,
@@ -27,6 +29,7 @@ func NewServer(addr string, store *database.Store, maker auth.Maker, duration ti
 		AccessTokenDuration: duration,
 		Mailer:              mailer,
 		FileStorage:         fileStorage,
+		ImageProcessor:      imageProcessor,
 	}
 
 	return &http.Server{

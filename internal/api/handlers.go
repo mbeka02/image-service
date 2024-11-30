@@ -226,6 +226,32 @@ func (s *Server) handleDeleteImage(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, response)
 }
 
+func (s *Server) handleImageResize(w http.ResponseWriter, r *http.Request) {
+	params := models.ResizeImageRequest{}
+	if err := parseJSON(r, &params); err != nil {
+
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if validationErrors := validateRequest(params); validationErrors != nil {
+		respondWithJSON(w, http.StatusBadRequest, APIError{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
+			Detail:  fmt.Sprintf("%v", validationErrors),
+		})
+		return
+	}
+	path, err := s.FileStorage.DownloadTemp(r.Context(), params.FileName)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// respondWithJSON(w, http.StatusOK, path)
+	return
+}
+
 func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 }

@@ -9,6 +9,8 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+var validate *validator.Validate
+
 // APIError represents a structured error response
 type APIError struct {
 	Status  int    `json:"status"`

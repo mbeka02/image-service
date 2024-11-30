@@ -18,6 +18,8 @@ type Server struct {
 	Mailer              *mailer.Mailer
 	FileStorage         imgstore.Storage
 	ImageProcessor      imgproc.ImageProcessor
+	ImageHandler        *ImageHandler
+	UserHandler         *UserHandler
 	AccessTokenDuration time.Duration
 }
 
@@ -30,6 +32,8 @@ func NewServer(addr string, store *database.Store, maker auth.Maker, duration ti
 		Mailer:              mailer,
 		FileStorage:         fileStorage,
 		ImageProcessor:      imageProcessor,
+		ImageHandler:        &ImageHandler{Store: store, FileStorage: fileStorage, ImageProcessor: imageProcessor},
+		UserHandler:         &UserHandler{Store: store, AuthMaker: maker, Mailer: mailer, AccessTokenDuration: duration},
 	}
 
 	return &http.Server{

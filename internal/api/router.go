@@ -20,15 +20,15 @@ func (s *Server) RegisterRoutes() http.Handler {
 	}))
 	r.Use(middleware.Logger)
 
-	r.Post("/register", s.handleCreateUser)
-	r.Post("/login", s.handleLogin)
+	r.Post("/register", s.UserHandler.handleCreateUser)
+	r.Post("/login", s.UserHandler.handleLogin)
 
 	r.Route("/images", func(r chi.Router) {
 		r.Use(AuthMiddleware(s.AuthMaker))
-		r.Get("/get", s.handleGetImages)
-		r.Post("/upload", s.handleImageUpload)
-		r.Post("/resize", s.handleImageResize)
-		r.Delete("/delete/{imageId}", s.handleDeleteImage)
+		r.Get("/get", s.ImageHandler.handleGetImages)
+		r.Post("/upload", s.ImageHandler.handleImageUpload)
+		r.Post("/resize", s.ImageHandler.handleImageResize)
+		r.Delete("/delete/{imageId}", s.ImageHandler.handleDeleteImage)
 	})
 
 	return r

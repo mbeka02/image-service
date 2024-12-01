@@ -8,12 +8,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mbeka02/image-service/internal/api"
 	"github.com/mbeka02/image-service/internal/auth"
 	"github.com/mbeka02/image-service/internal/database"
 	"github.com/mbeka02/image-service/internal/imgproc"
 	"github.com/mbeka02/image-service/internal/imgstore"
 	"github.com/mbeka02/image-service/internal/mailer"
+	"github.com/mbeka02/image-service/internal/server"
 
 	"github.com/mbeka02/image-service/config"
 )
@@ -62,7 +62,7 @@ func main() {
 	}
 	newImageProcessor := imgproc.NewBimgProcessor(100, 0)
 	done := make(chan bool, 1)
-	server := api.NewServer(":"+conf.PORT, store, maker, conf.ACCESS_TOKEN_DURATION, newMailer, fileStorage, newImageProcessor)
+	server := server.NewServer(":"+conf.PORT, store, maker, conf.ACCESS_TOKEN_DURATION, newMailer, fileStorage, newImageProcessor)
 	go gracefulShutdown(server, done)
 	log.Println("the server is listening on port:" + conf.PORT)
 	server.ListenAndServe()

@@ -21,14 +21,14 @@ type UserHandler struct {
 }
 
 func (uh *UserHandler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	params := models.CreateUserRequest{}
+	request := models.CreateUserRequest{}
 
-	if err := parseJSON(r, &params); err != nil {
+	if err := parseJSON(r, &request); err != nil {
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if validationErrors := validateRequest(params); validationErrors != nil {
+	if validationErrors := validateRequest(request); validationErrors != nil {
 		respondWithJSON(w, http.StatusBadRequest, APIError{
 			Status:  http.StatusBadRequest,
 			Message: "Validation failed",
@@ -37,15 +37,15 @@ func (uh *UserHandler) handleCreateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	passwordHash, err := auth.HashPassword(params.Password)
+	passwordHash, err := auth.HashPassword(request.Password)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, errors.New("failed to process password"))
 		return
 	}
 
 	user, err := uh.Store.CreateUser(r.Context(), database.CreateUserParams{
-		FullName: params.Fullname,
-		Email:    params.Email,
+		FullName: request.Fullname,
+		Email:    request.Email,
 		Password: passwordHash,
 	})
 	if err != nil {
@@ -80,14 +80,14 @@ func (uh *UserHandler) handleCreateUser(w http.ResponseWriter, r *http.Request) 
 }
 
 func (uh *UserHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
-	params := models.LoginRequest{}
-	if err := parseJSON(r, &params); err != nil {
+	request := models.LoginRequest{}
+	if err := parseJSON(r, &request); err != nil {
 
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if validationErrors := validateRequest(params); validationErrors != nil {
+	if validationErrors := validateRequest(request); validationErrors != nil {
 		respondWithJSON(w, http.StatusBadRequest, APIError{
 			Status:  http.StatusBadRequest,
 			Message: "Validation failed",
@@ -95,12 +95,12 @@ func (uh *UserHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	user, err := uh.Store.GetUserByEmail(r.Context(), params.Email)
+	user, err := uh.Store.GetUserByEmail(r.Context(), request.Email)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, errors.New("unable to find user"))
 		return
 	}
-	err = auth.ComparePassword(params.Password, user.Password)
+	err = auth.ComparePassword(request.Password, user.Password)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, err)
 		return

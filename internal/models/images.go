@@ -16,3 +16,12 @@ type CropImageRequest struct {
 	Height   int    `json:"height" validate:"required"`
 	FileName string `json:"file_name" validate:"required"`
 }
+
+type FlipImageRequest struct {
+	FileName string `json:"file_name" validate:"required"`
+}
+
+type ConvertImageRequest struct {
+	ImageType string `json:"image_type" validate:"required"`
+	FileName  string `json:"file_name" validate:"required"`
+}

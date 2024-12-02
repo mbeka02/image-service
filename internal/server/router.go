@@ -30,6 +30,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Post("/resize", s.ImageHandler.handleImageResize)
 		r.Post("/rotate", s.ImageHandler.handleImageRotation)
 		r.Post("/crop", s.ImageHandler.handleImageCropping)
+		r.Post("/flip", s.ImageHandler.handleImageFlip)
+		r.Post("/convert", s.ImageHandler.handleImageConversion)
+
 		r.Delete("/delete/{imageId}", s.ImageHandler.handleDeleteImage)
 	})
 

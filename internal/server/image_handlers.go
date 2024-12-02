@@ -243,3 +243,77 @@ func (ih *ImageHandler) handleImageCropping(w http.ResponseWriter, r *http.Reque
 	respondWithJSON(w, http.StatusOK, response)
 	return
 }
+
+func (ih *ImageHandler) handleImageFlip(w http.ResponseWriter, r *http.Request) {
+	request := models.FlipImageRequest{}
+	if err := parseJSON(r, request); err != nil {
+
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+
+	}
+	if validationErrors := validateRequest(request); validationErrors != nil {
+		respondWithJSON(w, http.StatusBadRequest, APIError{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
+			Detail:  fmt.Sprintf("%v", validationErrors),
+		})
+		return
+	}
+	path, err := ih.FileStorage.DownloadTemp(r.Context(), request.FileName)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer os.RemoveAll(path)
+	fileData, err := ih.ImageProcessor.Flip(path)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	response := APIResponse{
+		Message: "Image Flipped",
+		Data:    fileData,
+		Status:  http.StatusOK,
+	}
+
+	respondWithJSON(w, http.StatusOK, response)
+	return
+}
+
+func (ih *ImageHandler) handleImageConversion(w http.ResponseWriter, r *http.Request) {
+	request := models.ConvertImageRequest{}
+	if err := parseJSON(r, request); err != nil {
+
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+
+	}
+	if validationErrors := validateRequest(request); validationErrors != nil {
+		respondWithJSON(w, http.StatusBadRequest, APIError{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
+			Detail:  fmt.Sprintf("%v", validationErrors),
+		})
+		return
+	}
+	path, err := ih.FileStorage.DownloadTemp(r.Context(), request.FileName)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer os.RemoveAll(path)
+	fileData, err := ih.ImageProcessor.Convert(path, request.ImageType)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	response := APIResponse{
+		Message: "Image Converted",
+		Data:    fileData,
+		Status:  http.StatusOK,
+	}
+
+	respondWithJSON(w, http.StatusOK, response)
+	return
+}

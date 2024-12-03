@@ -23,20 +23,10 @@ type UserHandler struct {
 func (uh *UserHandler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	request := models.CreateUserRequest{}
 
-	if err := parseJSON(r, &request); err != nil {
+	if err := parseAndValidateRequest(r, &request); err != nil {
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
-
-	if validationErrors := validateRequest(request); validationErrors != nil {
-		respondWithJSON(w, http.StatusBadRequest, APIError{
-			Status:  http.StatusBadRequest,
-			Message: "Validation failed",
-			Detail:  fmt.Sprintf("%v", validationErrors),
-		})
-		return
-	}
-
 	passwordHash, err := auth.HashPassword(request.Password)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, errors.New("failed to process password"))
@@ -53,7 +43,12 @@ func (uh *UserHandler) handleCreateUser(w http.ResponseWriter, r *http.Request) 
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code.Name() {
 			case "unique_violation":
-				respondWithError(w, http.StatusForbidden, errors.New("forbidden: the username or email are already in use"))
+				respondWithJSON(w, http.StatusForbidden, APIError{
+					Status:  http.StatusForbidden,
+					Message: "forbidden : the username or email are already in use",
+					Detail:  err.Error(),
+				})
+
 				return
 			}
 		}
@@ -81,18 +76,9 @@ func (uh *UserHandler) handleCreateUser(w http.ResponseWriter, r *http.Request) 
 
 func (uh *UserHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	request := models.LoginRequest{}
-	if err := parseJSON(r, &request); err != nil {
+	if err := parseAndValidateRequest(r, &request); err != nil {
 
 		respondWithError(w, http.StatusBadRequest, err)
-		return
-	}
-
-	if validationErrors := validateRequest(request); validationErrors != nil {
-		respondWithJSON(w, http.StatusBadRequest, APIError{
-			Status:  http.StatusBadRequest,
-			Message: "Validation failed",
-			Detail:  fmt.Sprintf("%v", validationErrors),
-		})
 		return
 	}
 	user, err := uh.Store.GetUserByEmail(r.Context(), request.Email)

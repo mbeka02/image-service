@@ -79,6 +79,16 @@ func validateRequest(v interface{}) []ValidationError {
 	return nil
 }
 
+func parseAndValidateRequest(r *http.Request, v interface{}) error {
+	if err := parseJSON(r, v); err != nil {
+		return err
+	}
+	if validationErrors := validateRequest(v); validationErrors != nil {
+		return fmt.Errorf("Validation failed : %v", validationErrors)
+	}
+	return nil
+}
+
 func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 }

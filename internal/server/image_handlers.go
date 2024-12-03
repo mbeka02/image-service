@@ -20,6 +20,31 @@ type ImageHandler struct {
 	ImageProcessor imgproc.ImageProcessor
 }
 
+func (ih *ImageHandler) processImage(w http.ResponseWriter, r *http.Request,
+	fn func(string) ([]byte, error),
+	fileName string,
+	successMsg string,
+) {
+	path, err := ih.FileStorage.DownloadTemp(r.Context(), fileName)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer os.RemoveAll(path)
+	fileData, err := fn(path)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	response := APIResponse{
+		Message: successMsg,
+		Data:    fileData,
+		Status:  http.StatusOK,
+	}
+
+	respondWithJSON(w, http.StatusOK, response)
+}
+
 func (ih *ImageHandler) handleImageUpload(w http.ResponseWriter, r *http.Request) {
 	// get the file
 	_, fileHeader, err := r.FormFile("image")
@@ -135,185 +160,65 @@ func (ih *ImageHandler) handleDeleteImage(w http.ResponseWriter, r *http.Request
 
 func (ih *ImageHandler) handleImageResize(w http.ResponseWriter, r *http.Request) {
 	request := models.ResizeImageRequest{}
-	if err := parseJSON(r, &request); err != nil {
+	if err := parseAndValidateRequest(r, &request); err != nil {
 
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if validationErrors := validateRequest(request); validationErrors != nil {
-		respondWithJSON(w, http.StatusBadRequest, APIError{
-			Status:  http.StatusBadRequest,
-			Message: "Validation failed",
-			Detail:  fmt.Sprintf("%v", validationErrors),
-		})
-		return
-	}
-	path, err := ih.FileStorage.DownloadTemp(r.Context(), request.FileName)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer os.RemoveAll(path)
-	fileData, err := ih.ImageProcessor.Resize(path, request.Width, request.Height)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	response := APIResponse{
-		Message: "Image Resized",
-		Data:    fileData,
-		Status:  http.StatusOK,
-	}
-
-	respondWithJSON(w, http.StatusOK, response)
-	return
+	ih.processImage(w, r, func(path string) ([]byte, error) {
+		return ih.ImageProcessor.Resize(path, request.Width, request.Height)
+	}, request.FileName, "Image Resized")
 }
 
 func (ih *ImageHandler) handleImageRotation(w http.ResponseWriter, r *http.Request) {
 	request := models.RotateImageRequest{}
-	if err := parseJSON(r, request); err != nil {
+	if err := parseAndValidateRequest(r, &request); err != nil {
 
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 
 	}
-	if validationErrors := validateRequest(request); validationErrors != nil {
-		respondWithJSON(w, http.StatusBadRequest, APIError{
-			Status:  http.StatusBadRequest,
-			Message: "Validation failed",
-			Detail:  fmt.Sprintf("%v", validationErrors),
-		})
-		return
-	}
-	path, err := ih.FileStorage.DownloadTemp(r.Context(), request.FileName)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer os.RemoveAll(path)
-	fileData, err := ih.ImageProcessor.Rotate(path, request.Angle)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	response := APIResponse{
-		Message: "Image Rotated",
-		Data:    fileData,
-		Status:  http.StatusOK,
-	}
-
-	respondWithJSON(w, http.StatusOK, response)
-	return
+	ih.processImage(w, r, func(path string) ([]byte, error) {
+		return ih.ImageProcessor.Rotate(path, request.Angle)
+	}, request.FileName, "Image Rotated")
 }
 
 func (ih *ImageHandler) handleImageCropping(w http.ResponseWriter, r *http.Request) {
 	request := models.CropImageRequest{}
-	if err := parseJSON(r, request); err != nil {
+	if err := parseAndValidateRequest(r, &request); err != nil {
 
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 
 	}
-	if validationErrors := validateRequest(request); validationErrors != nil {
-		respondWithJSON(w, http.StatusBadRequest, APIError{
-			Status:  http.StatusBadRequest,
-			Message: "Validation failed",
-			Detail:  fmt.Sprintf("%v", validationErrors),
-		})
-		return
-	}
-	path, err := ih.FileStorage.DownloadTemp(r.Context(), request.FileName)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer os.RemoveAll(path)
-	fileData, err := ih.ImageProcessor.Crop(path, request.Width, request.Height)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	response := APIResponse{
-		Message: "Image Resized",
-		Data:    fileData,
-		Status:  http.StatusOK,
-	}
-
-	respondWithJSON(w, http.StatusOK, response)
-	return
+	ih.processImage(w, r, func(path string) ([]byte, error) {
+		return ih.ImageProcessor.Resize(path, request.Height, request.Width)
+	}, request.FileName, "Image Resized")
 }
 
 func (ih *ImageHandler) handleImageFlip(w http.ResponseWriter, r *http.Request) {
 	request := models.FlipImageRequest{}
-	if err := parseJSON(r, request); err != nil {
+	if err := parseAndValidateRequest(r, &request); err != nil {
 
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 
 	}
-	if validationErrors := validateRequest(request); validationErrors != nil {
-		respondWithJSON(w, http.StatusBadRequest, APIError{
-			Status:  http.StatusBadRequest,
-			Message: "Validation failed",
-			Detail:  fmt.Sprintf("%v", validationErrors),
-		})
-		return
-	}
-	path, err := ih.FileStorage.DownloadTemp(r.Context(), request.FileName)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer os.RemoveAll(path)
-	fileData, err := ih.ImageProcessor.Flip(path)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	response := APIResponse{
-		Message: "Image Flipped",
-		Data:    fileData,
-		Status:  http.StatusOK,
-	}
-
-	respondWithJSON(w, http.StatusOK, response)
-	return
+	ih.processImage(w, r, func(path string) ([]byte, error) {
+		return ih.ImageProcessor.Flip(path)
+	}, request.FileName, "Image Flipped")
 }
 
 func (ih *ImageHandler) handleImageConversion(w http.ResponseWriter, r *http.Request) {
 	request := models.ConvertImageRequest{}
-	if err := parseJSON(r, request); err != nil {
+	if err := parseAndValidateRequest(r, &request); err != nil {
 
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 
 	}
-	if validationErrors := validateRequest(request); validationErrors != nil {
-		respondWithJSON(w, http.StatusBadRequest, APIError{
-			Status:  http.StatusBadRequest,
-			Message: "Validation failed",
-			Detail:  fmt.Sprintf("%v", validationErrors),
-		})
-		return
-	}
-	path, err := ih.FileStorage.DownloadTemp(r.Context(), request.FileName)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer os.RemoveAll(path)
-	fileData, err := ih.ImageProcessor.Convert(path, request.ImageType)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-	response := APIResponse{
-		Message: "Image Converted",
-		Data:    fileData,
-		Status:  http.StatusOK,
-	}
-
-	respondWithJSON(w, http.StatusOK, response)
-	return
+	ih.processImage(w, r, func(path string) ([]byte, error) {
+		return ih.ImageProcessor.Convert(path, request.ImageType)
+	}, request.FileName, "Image Converted")
 }

@@ -2,10 +2,12 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -19,7 +21,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 	r.Use(middleware.Logger)
-
+	r.Use(httprate.LimitByIP(100, time.Minute))
 	r.Post("/register", s.UserHandler.handleCreateUser)
 	r.Post("/login", s.UserHandler.handleLogin)
 
@@ -32,7 +34,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Post("/crop", s.ImageHandler.handleImageCropping)
 		r.Post("/flip", s.ImageHandler.handleImageFlip)
 		r.Post("/convert", s.ImageHandler.handleImageConversion)
-
+		r.Post("/zoom", s.ImageHandler.handleImageZoom)
 		r.Delete("/delete/{imageId}", s.ImageHandler.handleDeleteImage)
 	})
 

@@ -25,3 +25,7 @@ type ConvertImageRequest struct {
 	ImageType string `json:"image_type" validate:"required"`
 	FileName  string `json:"file_name" validate:"required"`
 }
+type ZoomImageRequest struct {
+	Factor   int    `json:"factor" validate:"required"`
+	FileName string `json:"file_name" validate:"required"`
+}

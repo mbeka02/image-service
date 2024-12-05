@@ -44,6 +44,14 @@ func respondWithJSON(w http.ResponseWriter, status int, payload interface{}) err
 	return nil
 }
 
+func respondWithImage(w http.ResponseWriter, data []byte) error {
+	w.Header().Set("Content-Type", "image/jpeg")
+	if _, err := w.Write(data); err != nil {
+		return fmt.Errorf("unable to write the data to the connection:%v", err)
+	}
+	return nil
+}
+
 // respondWithError handles error responses in a consistent format
 func respondWithError(w http.ResponseWriter, status int, err error) {
 	apiError := APIError{

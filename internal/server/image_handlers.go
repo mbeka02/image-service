@@ -36,13 +36,13 @@ func (ih *ImageHandler) processImage(w http.ResponseWriter, r *http.Request,
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
-	response := APIResponse{
-		Message: successMsg,
-		Data:    fileData,
-		Status:  http.StatusOK,
-	}
-
-	respondWithJSON(w, http.StatusOK, response)
+	// response := APIResponse{
+	// 	Message: successMsg,
+	// 	Data:    fileData,
+	// 	Status:  http.StatusOK,
+	// }
+	respondWithImage(w, fileData)
+	// respondWithJSON(w, http.StatusOK, response)
 }
 
 func (ih *ImageHandler) handleImageUpload(w http.ResponseWriter, r *http.Request) {
@@ -221,4 +221,15 @@ func (ih *ImageHandler) handleImageConversion(w http.ResponseWriter, r *http.Req
 	ih.processImage(w, r, func(path string) ([]byte, error) {
 		return ih.ImageProcessor.Convert(path, request.ImageType)
 	}, request.FileName, "Image Converted")
+}
+
+func (ih *ImageHandler) handleImageZoom(w http.ResponseWriter, r *http.Request) {
+	request := models.ZoomImageRequest{}
+	if err := parseAndValidateRequest(r, &request); err != nil {
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+	}
+	ih.processImage(w, r, func(path string) ([]byte, error) {
+		return ih.ImageProcessor.Zoom(path, request.Factor)
+	}, request.FileName, fmt.Sprint("zoomed by a factor of:", request.Factor))
 }

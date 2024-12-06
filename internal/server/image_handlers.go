@@ -206,6 +206,33 @@ func (ih *ImageHandler) handleDeleteImage(w http.ResponseWriter, r *http.Request
 	respondWithJSON(w, http.StatusOK, response)
 }
 
+func (ih *ImageHandler) handleGetImage(w http.ResponseWriter, r *http.Request) {
+	imageId, err := getImageId(r)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, errors.New("invalid url param"))
+		return
+	}
+	payload, err := getAuthPayload(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+	image, err := ih.Store.GetImage(r.Context(), int64(imageId))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, errors.New("unable to get image"))
+		return
+	}
+	if image.UserID != payload.UserID {
+		respondWithError(w, http.StatusUnauthorized, errors.New("unauthorized!"))
+		return
+	}
+	respondWithJSON(w, http.StatusOK, APIResponse{
+		Message: "image:",
+		Data:    image,
+		Status:  http.StatusOK,
+	})
+}
+
 func (ih *ImageHandler) handleImageTransformations(w http.ResponseWriter, r *http.Request) {
 	imageId, err := getImageId(r)
 	image, err := ih.Store.GetImage(r.Context(), int64(imageId))

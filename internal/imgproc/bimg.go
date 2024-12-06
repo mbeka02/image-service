@@ -20,65 +20,41 @@ func NewBimgProcessor(quality, compression int) ImageProcessor {
 	}
 }
 
-func readImage(path string) ([]byte, error) {
-	return bimg.Read(path)
+//
+// func readImage(data []byte) ([]byte, error) {
+// 	return bimg.Read(path)
+// }
+
+func (b *BimgProccessor) Resize(data []byte, width, height int) ([]byte, error) {
+	return bimg.NewImage(data).Resize(width, height)
 }
 
-func (b *BimgProccessor) Resize(path string, width, height int) ([]byte, error) {
-	buff, err := readImage(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return bimg.NewImage(buff).Resize(width, height)
+func (b *BimgProccessor) Rotate(data []byte, angle int) ([]byte, error) {
+	return bimg.NewImage(data).Rotate(bimg.Angle(angle))
 }
 
-func (b *BimgProccessor) Rotate(path string, angle int) ([]byte, error) {
-	buff, err := readImage(path)
-	if err != nil {
-		return nil, err
-	}
-	return bimg.NewImage(buff).Rotate(bimg.Angle(angle))
+func (b *BimgProccessor) Crop(data []byte, width, height int) ([]byte, error) {
+	return bimg.NewImage(data).Crop(width, height, bimg.GravityCentre)
 }
 
-func (b *BimgProccessor) Crop(path string, width, height int) ([]byte, error) {
-	buff, err := readImage(path)
-	if err != nil {
-		return nil, err
-	}
-	return bimg.NewImage(buff).Crop(width, height, bimg.GravityCentre)
+func (b *BimgProccessor) Zoom(data []byte, factor int) ([]byte, error) {
+	return bimg.NewImage(data).Zoom(factor)
 }
 
-func (b *BimgProccessor) Zoom(path string, factor int) ([]byte, error) {
-	buff, err := readImage(path)
-	if err != nil {
-		return nil, err
-	}
-	return bimg.NewImage(buff).Zoom(factor)
+func (b *BimgProccessor) Flip(data []byte) ([]byte, error) {
+	return bimg.NewImage(data).Flip()
 }
 
-func (b *BimgProccessor) Flip(path string) ([]byte, error) {
-	buff, err := readImage(path)
-	if err != nil {
-		return nil, err
-	}
-	return bimg.NewImage(buff).Flip()
-}
-
-func (b *BimgProccessor) Convert(path, imageType string) ([]byte, error) {
-	buff, err := readImage(path)
-	if err != nil {
-		return nil, err
-	}
+func (b *BimgProccessor) Convert(data []byte, imageType string) ([]byte, error) {
 	switch imageType {
 	case "png":
-		return bimg.NewImage(buff).Convert(bimg.PNG)
+		return bimg.NewImage(data).Convert(bimg.PNG)
 	case "jpeg":
-		return bimg.NewImage(buff).Convert(bimg.JPEG)
+		return bimg.NewImage(data).Convert(bimg.JPEG)
 	case "webp":
-		return bimg.NewImage(buff).Convert(bimg.WEBP)
+		return bimg.NewImage(data).Convert(bimg.WEBP)
 	case "svg":
-		return bimg.NewImage(buff).Convert(bimg.SVG)
+		return bimg.NewImage(data).Convert(bimg.SVG)
 	default:
 		return nil, fmt.Errorf("%s is not a supported file format", imageType)
 	}

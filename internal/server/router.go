@@ -29,12 +29,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Use(AuthMiddleware(s.AuthMaker))
 		r.Get("/get", s.ImageHandler.handleGetImages)
 		r.Post("/upload", s.ImageHandler.handleImageUpload)
-		r.Post("/resize", s.ImageHandler.handleImageResize)
-		r.Post("/rotate", s.ImageHandler.handleImageRotation)
-		r.Post("/crop", s.ImageHandler.handleImageCropping)
-		r.Post("/flip", s.ImageHandler.handleImageFlip)
-		r.Post("/convert", s.ImageHandler.handleImageConversion)
-		r.Post("/zoom", s.ImageHandler.handleImageZoom)
+		r.Post("/transform/{imageId}", s.ImageHandler.handleImageTransformations)
 		r.Delete("/delete/{imageId}", s.ImageHandler.handleDeleteImage)
 	})
 

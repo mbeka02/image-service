@@ -20,29 +20,78 @@ type ImageHandler struct {
 	ImageProcessor imgproc.ImageProcessor
 }
 
-func (ih *ImageHandler) processImage(w http.ResponseWriter, r *http.Request,
-	fn func(string) ([]byte, error),
-	fileName string,
-	successMsg string,
-) {
-	path, err := ih.FileStorage.DownloadTemp(r.Context(), fileName)
+func getImageId(r *http.Request) (int, error) {
+	idParam := chi.URLParam(r, "imageId")
+	imageId, err := strconv.Atoi(idParam)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
+		return 0, errors.New("invalid url param")
 	}
-	defer os.RemoveAll(path)
-	fileData, err := fn(path)
+	return imageId, nil
+}
+
+func (ih *ImageHandler) applyTransformations(imagePath string, request *models.TransformationsRequest) ([]byte, error) {
+	var err error
+	var currentImageData []byte = nil
+	// Read the initial image
+	currentImageData, err = os.ReadFile(imagePath)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
+		return nil, fmt.Errorf("failed to read initial image: %v", err)
 	}
-	// response := APIResponse{
-	// 	Message: successMsg,
-	// 	Data:    fileData,
-	// 	Status:  http.StatusOK,
-	// }
-	respondWithImage(w, fileData)
-	// respondWithJSON(w, http.StatusOK, response)
+
+	// Apply transformations in a specific order
+	transformationFuncs := []func() ([]byte, error){
+		func() ([]byte, error) {
+			if request.Resize != nil {
+				return ih.ImageProcessor.Resize(currentImageData, request.Resize.Width, request.Resize.Height)
+			}
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Rotate != nil {
+				return ih.ImageProcessor.Rotate(currentImageData, request.Rotate.Angle)
+			}
+
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Crop != nil {
+				return ih.ImageProcessor.Crop(currentImageData, request.Crop.Width, request.Crop.Height)
+			}
+
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Flip != nil {
+				return ih.ImageProcessor.Flip(currentImageData)
+			}
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Convert != nil {
+				return ih.ImageProcessor.Convert(currentImageData, request.Convert.ImageType)
+			}
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Zoom != nil {
+				return ih.ImageProcessor.Zoom(currentImageData, request.Zoom.Factor)
+			}
+			return currentImageData, nil
+		},
+	}
+
+	defer os.Remove(imagePath)
+	// Apply transformations sequentially
+	for _, transformFunc := range transformationFuncs {
+
+		// Apply transformation
+		currentImageData, err = transformFunc()
+		if err != nil {
+			return nil, fmt.Errorf("transformation failed: %v", err)
+		}
+	}
+
+	return currentImageData, nil
 }
 
 func (ih *ImageHandler) handleImageUpload(w http.ResponseWriter, r *http.Request) {
@@ -121,8 +170,7 @@ func (ih *ImageHandler) handleGetImages(w http.ResponseWriter, r *http.Request) 
 }
 
 func (ih *ImageHandler) handleDeleteImage(w http.ResponseWriter, r *http.Request) {
-	idParam := chi.URLParam(r, "imageId")
-	imageId, err := strconv.Atoi(idParam)
+	imageId, err := getImageId(r)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, errors.New("invalid url param"))
 		return
@@ -158,78 +206,45 @@ func (ih *ImageHandler) handleDeleteImage(w http.ResponseWriter, r *http.Request
 	respondWithJSON(w, http.StatusOK, response)
 }
 
-func (ih *ImageHandler) handleImageResize(w http.ResponseWriter, r *http.Request) {
-	request := models.ResizeImageRequest{}
-	if err := parseAndValidateRequest(r, &request); err != nil {
-
-		respondWithError(w, http.StatusBadRequest, err)
+func (ih *ImageHandler) handleImageTransformations(w http.ResponseWriter, r *http.Request) {
+	imageId, err := getImageId(r)
+	image, err := ih.Store.GetImage(r.Context(), int64(imageId))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, errors.New("unable to get image"))
 		return
 	}
-
-	ih.processImage(w, r, func(path string) ([]byte, error) {
-		return ih.ImageProcessor.Resize(path, request.Width, request.Height)
-	}, request.FileName, "Image Resized")
-}
-
-func (ih *ImageHandler) handleImageRotation(w http.ResponseWriter, r *http.Request) {
-	request := models.RotateImageRequest{}
-	if err := parseAndValidateRequest(r, &request); err != nil {
-
-		respondWithError(w, http.StatusBadRequest, err)
-		return
-
-	}
-	ih.processImage(w, r, func(path string) ([]byte, error) {
-		return ih.ImageProcessor.Rotate(path, request.Angle)
-	}, request.FileName, "Image Rotated")
-}
-
-func (ih *ImageHandler) handleImageCropping(w http.ResponseWriter, r *http.Request) {
-	request := models.CropImageRequest{}
-	if err := parseAndValidateRequest(r, &request); err != nil {
-
-		respondWithError(w, http.StatusBadRequest, err)
-		return
-
-	}
-	ih.processImage(w, r, func(path string) ([]byte, error) {
-		return ih.ImageProcessor.Resize(path, request.Height, request.Width)
-	}, request.FileName, "Image Resized")
-}
-
-func (ih *ImageHandler) handleImageFlip(w http.ResponseWriter, r *http.Request) {
-	request := models.FlipImageRequest{}
-	if err := parseAndValidateRequest(r, &request); err != nil {
-
-		respondWithError(w, http.StatusBadRequest, err)
-		return
-
-	}
-	ih.processImage(w, r, func(path string) ([]byte, error) {
-		return ih.ImageProcessor.Flip(path)
-	}, request.FileName, "Image Flipped")
-}
-
-func (ih *ImageHandler) handleImageConversion(w http.ResponseWriter, r *http.Request) {
-	request := models.ConvertImageRequest{}
-	if err := parseAndValidateRequest(r, &request); err != nil {
-
-		respondWithError(w, http.StatusBadRequest, err)
-		return
-
-	}
-	ih.processImage(w, r, func(path string) ([]byte, error) {
-		return ih.ImageProcessor.Convert(path, request.ImageType)
-	}, request.FileName, "Image Converted")
-}
-
-func (ih *ImageHandler) handleImageZoom(w http.ResponseWriter, r *http.Request) {
-	request := models.ZoomImageRequest{}
-	if err := parseAndValidateRequest(r, &request); err != nil {
-		respondWithError(w, http.StatusBadRequest, err)
+	payload, err := getAuthPayload(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
-	ih.processImage(w, r, func(path string) ([]byte, error) {
-		return ih.ImageProcessor.Zoom(path, request.Factor)
-	}, request.FileName, fmt.Sprint("zoomed by a factor of:", request.Factor))
+	if image.UserID != payload.UserID {
+		respondWithError(w, http.StatusUnauthorized, errors.New("unauthorized!"))
+		return
+	}
+	request := models.TransformationsRequest{}
+	err = parseAndValidateRequest(r, &request)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err)
+	}
+
+	path, err := ih.FileStorage.DownloadTemp(r.Context(), image.FileName)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, APIError{
+			Message: "unable to perform the transformations",
+			Status:  http.StatusInternalServerError,
+			Detail:  err.Error(),
+		})
+		return
+	}
+	fileData, err := ih.applyTransformations(path, &request)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, APIError{
+			Message: "unable to perform the transformations",
+			Status:  http.StatusInternalServerError,
+			Detail:  err.Error(),
+		})
+		return
+	}
+	respondWithImage(w, fileData)
 }

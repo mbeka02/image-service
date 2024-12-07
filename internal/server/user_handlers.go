@@ -55,11 +55,11 @@ func (uh *UserHandler) handleCreateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusInternalServerError, errors.New("failed to create user"))
 		return
 	}
-	response := APIResponse{
-		Status:  http.StatusCreated,
-		Message: "User created successfully",
-		Data:    user,
-	}
+	// response := APIResponse{
+	// 	Status:  http.StatusCreated,
+	// 	Message: "User created successfully",
+	// 	Data:    user,
+	// }
 	go func() {
 		if err := uh.Mailer.SendEmail(); err != nil {
 			fmt.Println("unable to send the email:", err)
@@ -67,6 +67,12 @@ func (uh *UserHandler) handleCreateUser(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}()
+	userResponse := models.NewUserResponse(user)
+	token, err := uh.AuthMaker.Create(user.Email, user.UserID, uh.AccessTokenDuration)
+	response := models.AuthResponse{
+		AccessToken: token,
+		User:        userResponse,
+	}
 
 	if err := respondWithJSON(w, http.StatusCreated, response); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err)
@@ -93,11 +99,11 @@ func (uh *UserHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	userResponse := models.NewUserResponse(user)
 	token, err := uh.AuthMaker.Create(user.Email, user.UserID, uh.AccessTokenDuration)
-	resp := models.LoginResponse{
+	response := models.AuthResponse{
 		AccessToken: token,
 		User:        userResponse,
 	}
-	if err := respondWithJSON(w, http.StatusOK, resp); err != nil {
+	if err := respondWithJSON(w, http.StatusOK, response); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}

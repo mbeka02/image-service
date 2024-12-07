@@ -17,7 +17,7 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required,min=8"`
 }
 
-type LoginResponse struct {
+type AuthResponse struct {
 	AccessToken string       `json:"access_token"`
 	User        UserResponse `json:"user"`
 }

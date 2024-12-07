@@ -55,6 +55,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("...unable to setup up the auth token maker:%v", err)
 	}
+	// imgstore.EnableUniformBucketLevelAccess(os.Stdout, conf.GCLOUD_BUCKET_NAME)
 	newMailer := mailer.NewMailer(conf.MAILER_HOST, conf.MAILER_PASSWORD)
 	fileStorage, err := imgstore.NewGCStorage(conf.GCLOUD_PROJECT_ID, conf.GCLOUD_BUCKET_NAME)
 	if err != nil {

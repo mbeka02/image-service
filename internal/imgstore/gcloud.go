@@ -55,9 +55,9 @@ func (g *GCStorage) Upload(ctx context.Context, fileHeader *multipart.FileHeader
 	}
 	defer writer.Close()
 	// make the uploaded images public for Now
-	/*	if err := objectHandle.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
-		return "", fmt.Errorf("unable to make the file public:%v", err)
-	}*/
+	// if err := objectHandle.ACL().Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
+	// 	return nil, fmt.Errorf("unable to make the file public:%v", err)
+	// }
 	return &UploadResponse{
 		FileName:   fileName,
 		Size:       written,
@@ -109,4 +109,55 @@ func (g *GCStorage) DownloadTemp(ctx context.Context, fileName string) (string, 
 
 func (g *GCStorage) Close() error {
 	return g.client.Close()
+}
+
+// DisableUniformBucketLevelAccess sets uniform bucket-level access to false.
+func DisableUniformBucketLevelAccess(w io.Writer, bucketName string) error {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %w", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	bucket := client.Bucket(bucketName)
+	disableUniformBucketLevelAccess := storage.BucketAttrsToUpdate{
+		UniformBucketLevelAccess: &storage.UniformBucketLevelAccess{
+			Enabled: false,
+		},
+	}
+	if _, err := bucket.Update(ctx, disableUniformBucketLevelAccess); err != nil {
+		return fmt.Errorf("Bucket(%q).Update: %w", bucketName, err)
+	}
+	fmt.Fprintf(w, "Uniform bucket-level access was disabled for %v\n", bucketName)
+	return nil
+}
+
+// EnableUniformBucketLevelAccess sets uniform bucket-level access to true.
+func EnableUniformBucketLevelAccess(w io.Writer, bucketName string) error {
+	// bucketName := "bucket-name"
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %w", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	bucket := client.Bucket(bucketName)
+	enableUniformBucketLevelAccess := storage.BucketAttrsToUpdate{
+		UniformBucketLevelAccess: &storage.UniformBucketLevelAccess{
+			Enabled: true,
+		},
+	}
+	if _, err := bucket.Update(ctx, enableUniformBucketLevelAccess); err != nil {
+		return fmt.Errorf("Bucket(%q).Update: %w", bucketName, err)
+	}
+	fmt.Fprintf(w, "Uniform bucket-level access was enabled for %v\n", bucketName)
+	return nil
 }

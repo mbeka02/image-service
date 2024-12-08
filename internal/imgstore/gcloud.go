@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"cloud.google.com/go/iam"
+	"cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/storage"
 )
 
@@ -159,5 +161,31 @@ func EnableUniformBucketLevelAccess(w io.Writer, bucketName string) error {
 		return fmt.Errorf("Bucket(%q).Update: %w", bucketName, err)
 	}
 	fmt.Fprintf(w, "Uniform bucket-level access was enabled for %v\n", bucketName)
+	return nil
+}
+
+// SetBucketPublicIAM makes all objects in a bucket publicly readable.
+func SetBucketPublicIAM(w io.Writer, bucketName string) error {
+	// bucketName := "bucket-name"
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %w", err)
+	}
+	defer client.Close()
+
+	policy, err := client.Bucket(bucketName).IAM().V3().Policy(ctx)
+	if err != nil {
+		return fmt.Errorf("Bucket(%q).IAM().V3().Policy: %w", bucketName, err)
+	}
+	role := "roles/storage.objectViewer"
+	policy.Bindings = append(policy.Bindings, &iampb.Binding{
+		Role:    role,
+		Members: []string{iam.AllUsers},
+	})
+	if err := client.Bucket(bucketName).IAM().V3().SetPolicy(ctx, policy); err != nil {
+		return fmt.Errorf("Bucket(%q).IAM().SetPolicy: %w", bucketName, err)
+	}
+	fmt.Fprintf(w, "Bucket %v is now publicly readable\n", bucketName)
 	return nil
 }

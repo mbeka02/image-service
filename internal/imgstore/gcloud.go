@@ -79,6 +79,10 @@ func (g *GCStorage) Download(ctx context.Context, fileName string) (io.Reader, e
 	return reader, nil
 }
 
+//	func (g *GCStorage) Update(ctx context.Context , fileName string) error {
+//	  object:=g.client.Bucket(g.bucketName).Object(fileName)
+//	  object.Update()
+//	}
 func (g *GCStorage) Delete(ctx context.Context, fileName string) error {
 	object := g.client.Bucket(g.bucketName).Object(fileName)
 

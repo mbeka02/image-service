@@ -3,9 +3,14 @@ package server
 import (
 	"errors"
 	"fmt"
+	"image"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"strconv"
+
+	_ "image/jpeg"
+	_ "image/png"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/mbeka02/image-service/internal/database"
@@ -13,6 +18,8 @@ import (
 	"github.com/mbeka02/image-service/internal/imgstore"
 	"github.com/mbeka02/image-service/internal/models"
 )
+
+const maxFileSize = 1024 * 1024 * 10
 
 type ImageHandler struct {
 	Store          *database.Store
@@ -29,78 +36,46 @@ func getImageId(r *http.Request) (int, error) {
 	return imageId, nil
 }
 
-func (ih *ImageHandler) applyTransformations(imagePath string, request *models.TransformationsRequest) ([]byte, error) {
-	var err error
-	var currentImageData []byte = nil
-	// Read the initial image
-	currentImageData, err = os.ReadFile(imagePath)
+func extractMetadata(file multipart.File) (string, int, int, error) {
+	buff := make([]byte, 512)
+	if _, err := file.Read(buff); err != nil {
+		return "", 0, 0, err
+	}
+	contentType := http.DetectContentType(buff)
+	file.Seek(0, 0)
+
+	config, _, err := image.DecodeConfig(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read initial image: %v", err)
+		return contentType, 0, 0, err
 	}
 
-	// Apply transformations in a specific order
-	transformationFuncs := []func() ([]byte, error){
-		func() ([]byte, error) {
-			if request.Resize != nil {
-				return ih.ImageProcessor.Resize(currentImageData, request.Resize.Width, request.Resize.Height)
-			}
-			return currentImageData, nil
-		},
-		func() ([]byte, error) {
-			if request.Rotate != nil {
-				return ih.ImageProcessor.Rotate(currentImageData, request.Rotate.Angle)
-			}
-
-			return currentImageData, nil
-		},
-		func() ([]byte, error) {
-			if request.Crop != nil {
-				return ih.ImageProcessor.Crop(currentImageData, request.Crop.Width, request.Crop.Height)
-			}
-
-			return currentImageData, nil
-		},
-		func() ([]byte, error) {
-			if request.Flip != nil {
-				return ih.ImageProcessor.Flip(currentImageData)
-			}
-			return currentImageData, nil
-		},
-		func() ([]byte, error) {
-			if request.Convert != nil {
-				return ih.ImageProcessor.Convert(currentImageData, request.Convert.ImageType)
-			}
-			return currentImageData, nil
-		},
-		func() ([]byte, error) {
-			if request.Zoom != nil {
-				return ih.ImageProcessor.Zoom(currentImageData, request.Zoom.Factor)
-			}
-			return currentImageData, nil
-		},
-	}
-
-	defer os.Remove(imagePath)
-	// Apply transformations sequentially
-	for _, transformFunc := range transformationFuncs {
-
-		// Apply transformation
-		currentImageData, err = transformFunc()
-		if err != nil {
-			return nil, fmt.Errorf("transformation failed: %v", err)
-		}
-	}
-
-	return currentImageData, nil
+	file.Seek(0, 0)
+	fmt.Printf("contentType:%v,width:%v,height:%v", contentType, config.Width, config.Height)
+	return contentType, config.Width, config.Height, nil
 }
 
 func (ih *ImageHandler) handleImageUpload(w http.ResponseWriter, r *http.Request) {
 	// get the file
-	_, fileHeader, err := r.FormFile("image")
+	file, fileHeader, err := r.FormFile("image")
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("bad request:%v", err))
 		return
 	}
+	allowedFileTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+	}
+	contentType, width, height, err := extractMetadata(file)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("uanble to extract metadata:%v", err))
+		fmt.Println(err)
+		return
+	}
+	if _, ok := allowedFileTypes[contentType]; !ok {
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file format:%v", contentType))
+		return
+	}
+
 	// upload the file to GC storage
 	uploadResponse, err := ih.FileStorage.Upload(r.Context(), fileHeader)
 	if err != nil {
@@ -118,6 +93,7 @@ func (ih *ImageHandler) handleImageUpload(w http.ResponseWriter, r *http.Request
 		FileName:   uploadResponse.FileName,
 		StorageUrl: uploadResponse.StorageUrl,
 		FileSize:   uploadResponse.Size,
+		Metadata:   "",
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err)
@@ -274,4 +250,69 @@ func (ih *ImageHandler) handleImageTransformations(w http.ResponseWriter, r *htt
 		return
 	}
 	respondWithImage(w, fileData)
+}
+
+func (ih *ImageHandler) applyTransformations(imagePath string, request *models.TransformationsRequest) ([]byte, error) {
+	var err error
+	var currentImageData []byte = nil
+	// Read the initial image
+	currentImageData, err = os.ReadFile(imagePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read initial image: %v", err)
+	}
+
+	// Apply transformations in a specific order
+	transformationFuncs := []func() ([]byte, error){
+		func() ([]byte, error) {
+			if request.Resize != nil {
+				return ih.ImageProcessor.Resize(currentImageData, request.Resize.Width, request.Resize.Height)
+			}
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Rotate != nil {
+				return ih.ImageProcessor.Rotate(currentImageData, request.Rotate.Angle)
+			}
+
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Crop != nil {
+				return ih.ImageProcessor.Crop(currentImageData, request.Crop.Width, request.Crop.Height)
+			}
+
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Flip != nil {
+				return ih.ImageProcessor.Flip(currentImageData)
+			}
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Convert != nil {
+				return ih.ImageProcessor.Convert(currentImageData, request.Convert.ImageType)
+			}
+			return currentImageData, nil
+		},
+		func() ([]byte, error) {
+			if request.Zoom != nil {
+				return ih.ImageProcessor.Zoom(currentImageData, request.Zoom.Factor)
+			}
+			return currentImageData, nil
+		},
+	}
+
+	defer os.Remove(imagePath)
+	// Apply transformations sequentially
+	for _, transformFunc := range transformationFuncs {
+
+		// Apply transformation
+		currentImageData, err = transformFunc()
+		if err != nil {
+			return nil, fmt.Errorf("transformation failed: %v", err)
+		}
+	}
+
+	return currentImageData, nil
 }

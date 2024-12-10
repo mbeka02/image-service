@@ -7,10 +7,12 @@ package database
 
 import (
 	"context"
+
+	"github.com/sqlc-dev/pqtype"
 )
 
 const createImage = `-- name: CreateImage :one
-INSERT INTO images(user_id , file_name , file_size , storage_url) VALUES ($1,$2,$3,$4)RETURNING file_name , file_size , storage_url
+INSERT INTO images(user_id , file_name , file_size , storage_url , metadata) VALUES ($1,$2,$3,$4,$5)RETURNING file_name , file_size , storage_url
 `
 
 type CreateImageParams struct {
@@ -18,6 +20,7 @@ type CreateImageParams struct {
 	FileName   string
 	FileSize   int64
 	StorageUrl string
+	Metadata   pqtype.NullRawMessage
 }
 
 type CreateImageRow struct {
@@ -32,6 +35,7 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) (Creat
 		arg.FileName,
 		arg.FileSize,
 		arg.StorageUrl,
+		arg.Metadata,
 	)
 	var i CreateImageRow
 	err := row.Scan(&i.FileName, &i.FileSize, &i.StorageUrl)

@@ -12,7 +12,7 @@ import (
 type contextKey string
 
 const (
-	authorizationTypeBearer            = "bearer"
+	authorizationTypeBearer            = "Bearer"
 	authorizationPayloadKey contextKey = "authorization_payload"
 )
 
@@ -42,7 +42,7 @@ func extractAndVerifyToken(r *http.Request, maker auth.Maker) (*auth.Payload, er
 		return nil, ErrMalformedAuth
 	}
 
-	authType := strings.ToLower(fields[0])
+	authType := fields[0]
 	if authType != authorizationTypeBearer {
 		return nil, ErrUnsupportedAuth
 	}

@@ -6,3 +6,8 @@ sql:
     gen:
       go:
         out: "internal/database"
+        overrides:
+          - db_type: "json"
+            go_type:
+              type: "[]byte" # workaround sqlc bug when reading null json columns
+            nullable: true

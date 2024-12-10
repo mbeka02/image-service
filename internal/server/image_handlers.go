@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
@@ -17,41 +18,33 @@ import (
 	"github.com/mbeka02/image-service/internal/imgproc"
 	"github.com/mbeka02/image-service/internal/imgstore"
 	"github.com/mbeka02/image-service/internal/models"
+	"github.com/sqlc-dev/pqtype"
 )
 
-const maxFileSize = 1024 * 1024 * 10
+// const maxFileSize = 1024 * 1024 * 10
 
 type ImageHandler struct {
 	Store          *database.Store
 	FileStorage    imgstore.Storage
 	ImageProcessor imgproc.ImageProcessor
 }
-
-func getImageId(r *http.Request) (int, error) {
-	idParam := chi.URLParam(r, "imageId")
-	imageId, err := strconv.Atoi(idParam)
-	if err != nil {
-		return 0, errors.New("invalid url param")
-	}
-	return imageId, nil
+type ImageMetadata struct {
+	ContentType string `json:"content_type,omitempty"`
+	Width       int    `json:"width,omitempty"`
+	Height      int    `json:"height,omitempty"`
 }
 
-func extractMetadata(file multipart.File) (string, int, int, error) {
-	buff := make([]byte, 512)
-	if _, err := file.Read(buff); err != nil {
-		return "", 0, 0, err
-	}
-	contentType := http.DetectContentType(buff)
-	file.Seek(0, 0)
+func (i *ImageMetadata) Value() ([]byte, error) {
+	return json.Marshal(i)
+}
 
-	config, _, err := image.DecodeConfig(file)
-	if err != nil {
-		return contentType, 0, 0, err
+func (i *ImageMetadata) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
 	}
 
-	file.Seek(0, 0)
-	fmt.Printf("contentType:%v,width:%v,height:%v", contentType, config.Width, config.Height)
-	return contentType, config.Width, config.Height, nil
+	return json.Unmarshal(b, &i)
 }
 
 func (ih *ImageHandler) handleImageUpload(w http.ResponseWriter, r *http.Request) {
@@ -65,14 +58,14 @@ func (ih *ImageHandler) handleImageUpload(w http.ResponseWriter, r *http.Request
 		"image/jpeg": true,
 		"image/png":  true,
 	}
-	contentType, width, height, err := extractMetadata(file)
+	metadata, err := extractMetadata(file)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("uanble to extract metadata:%v", err))
 		fmt.Println(err)
 		return
 	}
-	if _, ok := allowedFileTypes[contentType]; !ok {
-		respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file format:%v", contentType))
+	if _, ok := allowedFileTypes[metadata.ContentType]; !ok {
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file format:%v", metadata.ContentType))
 		return
 	}
 
@@ -87,13 +80,23 @@ func (ih *ImageHandler) handleImageUpload(w http.ResponseWriter, r *http.Request
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
+	rawMessage, err := metadata.Value()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, errors.New("failed to get image metadata"))
+		return
+	}
+
+	nullableJSON := pqtype.NullRawMessage{
+		RawMessage: rawMessage,
+		Valid:      true, // Set to false if you want to store NULL
+	}
 	// save to DB
 	createdImage, err := ih.Store.CreateImage(r.Context(), database.CreateImageParams{
 		UserID:     payload.UserID,
 		FileName:   uploadResponse.FileName,
 		StorageUrl: uploadResponse.StorageUrl,
 		FileSize:   uploadResponse.Size,
-		Metadata:   "",
+		Metadata:   nullableJSON,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err)
@@ -315,4 +318,34 @@ func (ih *ImageHandler) applyTransformations(imagePath string, request *models.T
 	}
 
 	return currentImageData, nil
+}
+
+func getImageId(r *http.Request) (int, error) {
+	idParam := chi.URLParam(r, "imageId")
+	imageId, err := strconv.Atoi(idParam)
+	if err != nil {
+		return 0, errors.New("invalid url param")
+	}
+	return imageId, nil
+}
+
+func extractMetadata(file multipart.File) (*ImageMetadata, error) {
+	buff := make([]byte, 512)
+	if _, err := file.Read(buff); err != nil {
+		return nil, err
+	}
+	contentType := http.DetectContentType(buff)
+	file.Seek(0, 0)
+
+	config, _, err := image.DecodeConfig(file)
+	if err != nil {
+		return nil, err
+	}
+
+	file.Seek(0, 0)
+	return &ImageMetadata{
+		ContentType: contentType,
+		Height:      config.Height,
+		Width:       config.Width,
+	}, nil
 }

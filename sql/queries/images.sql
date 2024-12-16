@@ -1,5 +1,5 @@
 -- name: CreateImage :one
-INSERT INTO images(user_id , file_name , file_size , storage_url) VALUES ($1,$2,$3,$4)RETURNING file_name , file_size , storage_url;
+INSERT INTO images(user_id , file_name , file_size , storage_url , metadata) VALUES ($1,$2,$3,$4,$5)RETURNING file_name , file_size , storage_url;
 
 -- name: GetUserImages :many
 SELECT * FROM images WHERE user_id=$1 LIMIT $2 OFFSET $3;

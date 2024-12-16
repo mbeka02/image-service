@@ -58,7 +58,7 @@ func main() {
 	newMailer := mailer.NewMailer(conf.MAILER_HOST, conf.MAILER_PASSWORD)
 	fileStorage, err := imgstore.NewGCStorage(conf.GCLOUD_PROJECT_ID, conf.GCLOUD_BUCKET_NAME)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("...unable to setup cloud storage:%v", err)
 	}
 	newImageProcessor := imgproc.NewBimgProcessor(100, 0)
 	done := make(chan bool, 1)

@@ -12,7 +12,7 @@ import (
 type contextKey string
 
 const (
-	authorizationTypeBearer            = "Bearer"
+	authorizationTypeBearer            = "bearer"
 	authorizationPayloadKey contextKey = "authorization_payload"
 )
 

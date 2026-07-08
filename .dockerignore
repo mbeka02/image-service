@@ -1,0 +1,6 @@
+.env
+Makefile
+README.md 
+.air.toml
+tmp
+main

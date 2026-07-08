@@ -19,8 +19,8 @@ FROM alpine:3.21
 RUN apk add --no-cache vips ca-certificates \
     && addgroup -S appgroup && adduser -S appuser -G appgroup
 
-WORKDIR /app
-COPY --from=builder /app/main .
+WORKDIR /
+COPY --from=builder /app/main /main
 USER appuser
 
 EXPOSE 3000

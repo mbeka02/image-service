@@ -1,0 +1,55 @@
+name: Build || Push || Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: image-service-442420
+  REGION: me-central1
+  REPO: image-service
+  IMAGE: image-service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set image tag
+        run: |
+          echo "TAG=latest" >> $GITHUB_ENV
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/1091263617655/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: githubactions@image-service-442420.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - run: gcloud auth configure-docker me-central1-docker.pkg.dev
+
+      - name: Build image
+        run: |
+          docker build -t me-central1-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG .
+
+      - name: Push image
+        run: |
+          docker push me-central1-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy image-service \
+            --image me-central1-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG \
+            --region $REGION \
+            --platform managed \
+            --allow-unauthenticated \
+            --add-cloudsql-instances image-service-442420:me-central1:image-db \
+            --set-secrets DB_URI=DB_URI:latest,SYMMETRIC_KEY=SYMMETRIC_KEY:latest,ACCESS_TOKEN_DURATION=ACCESS_TOKEN_DURATION:latest,MAILER_PASSWORD=MAILER_PASSWORD:latest,MAILER_HOST=MAILER_HOST:latest,GCLOUD_PROJECT_ID=GCLOUD_PROJECT_ID:latest,GCLOUD_BUCKET_NAME=GCLOUD_BUCKET_NAME:latest

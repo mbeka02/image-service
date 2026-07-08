@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -22,6 +23,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	}))
 	r.Use(middleware.Logger)
 	r.Use(httprate.LimitByIP(100, time.Minute))
+	r.Get("/", handleHomeRoute)
 	r.Post("/register", s.UserHandler.handleCreateUser)
 	r.Post("/login", s.UserHandler.handleLogin)
 
@@ -35,4 +37,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 	})
 
 	return r
+}
+
+func handleHomeRoute(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Image Service")
 }

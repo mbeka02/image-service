@@ -50,6 +50,7 @@ jobs:
             --image me-central1-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG \
             --region $REGION \
             --platform managed \
+            --service-account githubactions@image-service-442420.iam.gserviceaccount.com \
             --allow-unauthenticated \
             --add-cloudsql-instances image-service-442420:me-central1:image-db \
             --set-secrets DB_URI=DB_URI:latest,SYMMETRIC_KEY=SYMMETRIC_KEY:latest,ACCESS_TOKEN_DURATION=ACCESS_TOKEN_DURATION:latest,MAILER_PASSWORD=MAILER_PASSWORD:latest,MAILER_HOST=MAILER_HOST:latest,GCLOUD_PROJECT_ID=GCLOUD_PROJECT_ID:latest,GCLOUD_BUCKET_NAME=GCLOUD_BUCKET_NAME:latest

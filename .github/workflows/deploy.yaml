@@ -52,8 +52,11 @@ jobs:
           echo "::add-mask::$CI_DB_URI"
           echo "CI_DB_URI=$CI_DB_URI" >> $GITHUB_ENV
 
-      - name: Setup Cloud SQL Proxy
-        uses: google-github-actions/setup-cloud-sql-proxy@v2
+      - name: Install Cloud SQL Proxy
+        run: |
+          curl -fsSL -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.15.2/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          sudo mv cloud-sql-proxy /usr/local/bin/
 
       - name: Run database migrations
         run: |

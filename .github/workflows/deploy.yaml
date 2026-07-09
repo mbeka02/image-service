@@ -34,6 +34,34 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      # ---- Database migration steps ----
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+
+      - name: Install goose
+        run: go install github.com/pressly/goose/v3/cmd/goose@v3.22.1
+
+      - name: Fetch DB_URI from Secret Manager
+        run: |
+          DB_URI=$(gcloud secrets versions access latest --secret=DB_URI --project=$PROJECT_ID)
+          echo "::add-mask::$DB_URI"
+          # Rewrite the socket path: Cloud Run uses /cloudsql/, but the proxy in CI uses /tmp/
+          CI_DB_URI=$(echo "$DB_URI" | sed 's|/cloudsql/|/tmp/|')
+          echo "::add-mask::$CI_DB_URI"
+          echo "CI_DB_URI=$CI_DB_URI" >> $GITHUB_ENV
+
+      - name: Setup Cloud SQL Proxy
+        uses: google-github-actions/setup-cloud-sql-proxy@v2
+
+      - name: Run database migrations
+        run: |
+          cloud-sql-proxy image-service-442420:me-central1:image-db --unix-socket /tmp &
+          sleep 3
+          goose -dir sql/schema postgres "$CI_DB_URI" up
+      # ---- End database migration steps ----
+
       - run: gcloud auth configure-docker me-central1-docker.pkg.dev
 
       - name: Build image

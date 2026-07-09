@@ -37,4 +37,18 @@ watch:
             fi; \
         fi
 
-.PHONY: all build run test clean watch docker-run docker-down itest
+# Database migrations (requires goose: go install github.com/pressly/goose/v3/cmd/goose@v3.22.1)
+migrate-up:
+	@goose -dir sql/schema postgres "$(DB_URI)" up
+
+migrate-down:
+	@goose -dir sql/schema postgres "$(DB_URI)" down
+
+migrate-status:
+	@goose -dir sql/schema postgres "$(DB_URI)" status
+
+migrate-create:
+	@read -p "Migration name: " name; \
+	goose -dir sql/schema create $$name sql
+
+.PHONY: all build run test clean watch migrate-up migrate-down migrate-status migrate-create

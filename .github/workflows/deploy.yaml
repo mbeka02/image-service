@@ -7,7 +7,7 @@ on:
 
 env:
   PROJECT_ID: image-service-442420
-  REGION: me-central1
+  REGION: us-central1
   REPO: image-service
   IMAGE: image-service
 
@@ -60,28 +60,27 @@ jobs:
 
       - name: Run database migrations
         run: |
-          cloud-sql-proxy image-service-442420:me-central1:image-db --unix-socket /tmp &
+          cloud-sql-proxy image-service-442420:us-central1:image-db --unix-socket /tmp &
           sleep 3
           goose -dir sql/schema postgres "$CI_DB_URI" up
       # ---- End database migration steps ----
-
-      - run: gcloud auth configure-docker me-central1-docker.pkg.dev
+      - run: gcloud auth configure-docker $REGION-docker.pkg.dev
 
       - name: Build image
         run: |
-          docker build -t me-central1-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG .
+          docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG .
 
       - name: Push image
         run: |
-          docker push me-central1-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG
+          docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy image-service \
-            --image me-central1-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG \
+            --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE:$TAG \
             --region $REGION \
             --platform managed \
             --service-account githubactions@image-service-442420.iam.gserviceaccount.com \
             --allow-unauthenticated \
-            --add-cloudsql-instances image-service-442420:me-central1:image-db \
+            --add-cloudsql-instances image-service-442420:us-central1:image-db \
             --set-secrets DB_URI=DB_URI:latest,SYMMETRIC_KEY=SYMMETRIC_KEY:latest,ACCESS_TOKEN_DURATION=ACCESS_TOKEN_DURATION:latest,MAILER_PASSWORD=MAILER_PASSWORD:latest,MAILER_HOST=MAILER_HOST:latest,GCLOUD_PROJECT_ID=GCLOUD_PROJECT_ID:latest,GCLOUD_BUCKET_NAME=GCLOUD_BUCKET_NAME:latest
